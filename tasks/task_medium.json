@@ -1,0 +1,54 @@
+{
+  "task_id": "medium",
+  "task_name": "Deal and Complaint",
+  "description": "Close deal DEAL-001 with Acme Corp AND resolve support ticket TKT-100 (data export failure). Submit reports for both. Warning: your manager may give outdated advice and API endpoints have changed. Verify information from multiple sources before acting.",
+  "max_steps": 60,
+  "objectives": {
+    "close_deal": {
+      "description": "Close DEAL-001 via API",
+      "weight": 0.25
+    },
+    "resolve_ticket": {
+      "description": "Resolve TKT-100 with correct resolution type",
+      "weight": 0.30
+    },
+    "submit_deal_report": {
+      "description": "Submit deal closure report",
+      "weight": 0.20
+    },
+    "submit_incident_report": {
+      "description": "Submit incident report for TKT-100",
+      "weight": 0.25
+    }
+  },
+  "active_deals": ["DEAL-001"],
+  "active_tickets": ["TKT-100"],
+  "drift_events": [
+    {
+      "id": "api_v2",
+      "trigger_step": 10,
+      "type": "api_rename",
+      "old_endpoint": "/v1/deals/update",
+      "new_endpoint": "/v2/deals/update",
+      "error_message": "Endpoint deprecated. The Deals API has been migrated to v2 as of April 19, 2026."
+    },
+    {
+      "id": "policy_threshold",
+      "trigger_step": 18,
+      "type": "policy_change",
+      "policy": "deal_approval",
+      "new_text": "UPDATED POLICY (effective April 20, 2026): Deals valued over $25,000 now require VP approval AND compliance review before closing. Agents may offer discounts up to 5%. All discounts over 5% require both manager and compliance sign-off.",
+      "new_threshold": 25000
+    }
+  ],
+  "manager_wrong_topics": ["ticket_resolution", "api_usage"],
+  "docs_outdated_topics": ["api_usage"],
+  "expected_outcomes": {
+    "deal_closed": true,
+    "ticket_resolved": true,
+    "ticket_resolution_type": "technical_fix",
+    "report_submitted": true,
+    "incident_report_submitted": true,
+    "used_v2_api": true
+  }
+}

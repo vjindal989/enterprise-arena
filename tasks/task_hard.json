@@ -1,0 +1,68 @@
+{
+  "task_id": "hard",
+  "task_name": "Full Pipeline Audit",
+  "description": "Complete the full enterprise pipeline: close deal DEAL-001, resolve ticket TKT-100, file a compliance report with a generated compliance_id, and submit an audit-ready summary. WARNING: Multiple sources are unreliable. API schemas will change mid-task. Policy thresholds will shift. Trust nothing without independent verification.",
+  "max_steps": 100,
+  "objectives": {
+    "close_deal": {
+      "description": "Close DEAL-001 with compliance_id via v2 API",
+      "weight": 0.20
+    },
+    "resolve_ticket": {
+      "description": "Resolve TKT-100 with correct root cause and resolution",
+      "weight": 0.20
+    },
+    "submit_compliance_report": {
+      "description": "Submit compliance report with correct compliance_id and deal data",
+      "weight": 0.25
+    },
+    "submit_audit_summary": {
+      "description": "Submit audit summary referencing all completed actions with verified data",
+      "weight": 0.20
+    },
+    "submit_incident_report": {
+      "description": "Submit incident report for TKT-100",
+      "weight": 0.15
+    }
+  },
+  "active_deals": ["DEAL-001"],
+  "active_tickets": ["TKT-100"],
+  "drift_events": [
+    {
+      "id": "api_v2",
+      "trigger_step": 8,
+      "type": "api_rename",
+      "old_endpoint": "/v1/deals/update",
+      "new_endpoint": "/v2/deals/update",
+      "error_message": "Endpoint deprecated. The Deals API has been migrated to v2 as of April 19, 2026."
+    },
+    {
+      "id": "new_required_field",
+      "trigger_step": 20,
+      "type": "required_field",
+      "endpoint": "/v2/deals/update",
+      "new_field": "compliance_id",
+      "error_message": "Missing required field 'compliance_id'. Generate one via POST /v2/compliance/generate with deal_id."
+    },
+    {
+      "id": "policy_threshold",
+      "trigger_step": 30,
+      "type": "policy_change",
+      "policy": "deal_approval",
+      "new_text": "UPDATED POLICY (effective April 20, 2026): Deals valued over $25,000 now require VP approval AND compliance review before closing. Agents may offer discounts up to 5%. All discounts over 5% require both manager and compliance sign-off.",
+      "new_threshold": 25000
+    }
+  ],
+  "manager_wrong_topics": ["ticket_resolution", "api_usage", "deal_approval"],
+  "docs_outdated_topics": ["api_usage", "compliance_guide"],
+  "expected_outcomes": {
+    "deal_closed": true,
+    "deal_has_compliance_id": true,
+    "ticket_resolved": true,
+    "ticket_resolution_type": "technical_fix",
+    "compliance_report_submitted": true,
+    "audit_summary_submitted": true,
+    "incident_report_submitted": true,
+    "used_v2_api": true
+  }
+}

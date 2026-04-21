@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "enterprise-arena"
+version = "0.1.0"
+description = "Adaptive Enterprise Arena – AI agents navigate workflows under schema drift, adversarial actors, and cascading consequences"
+requires-python = ">=3.10"
+dependencies = [
+    "openenv-core[core] @ git+https://github.com/meta-pytorch/OpenEnv.git@v0.2.3",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "requests>=2.31"]
+
+[tool.setuptools.packages.find]
+include = ["server*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

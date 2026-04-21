@@ -1,0 +1,35 @@
+{
+  "task_id": "easy",
+  "task_name": "Close the Deal",
+  "description": "You are an AI enterprise agent at Nexus Corp. Your objective: close deal DEAL-001 with Acme Corp (valued at $75,000 for Enterprise Suite) and submit a deal closure report. Note: API endpoints may have changed recently — verify before making critical calls.",
+  "max_steps": 40,
+  "objectives": {
+    "close_deal": {
+      "description": "Update DEAL-001 stage to closed-won via the API",
+      "weight": 0.6
+    },
+    "submit_report": {
+      "description": "Submit a deal closure report with deal details",
+      "weight": 0.4
+    }
+  },
+  "active_deals": ["DEAL-001"],
+  "active_tickets": [],
+  "drift_events": [
+    {
+      "id": "api_v2",
+      "trigger_step": 8,
+      "type": "api_rename",
+      "old_endpoint": "/v1/deals/update",
+      "new_endpoint": "/v2/deals/update",
+      "error_message": "Endpoint deprecated. The Deals API has been migrated to v2 as of April 19, 2026."
+    }
+  ],
+  "manager_wrong_topics": [],
+  "docs_outdated_topics": [],
+  "expected_outcomes": {
+    "deal_closed": true,
+    "report_submitted": true,
+    "used_v2_api": true
+  }
+}
