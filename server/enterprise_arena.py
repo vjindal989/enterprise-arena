@@ -15,9 +15,11 @@ from uuid import uuid4
 
 try:
     from openenv.core.env_server.mcp_environment import MCPEnvironment
+    from openenv.core.env_server.mcp_types import CallToolObservation
     from openenv.core.env_server.types import Action, Observation, State
 except ImportError:
     from openenv.core.env_server.mcp_environment import MCPEnvironment
+    from openenv.core.env_server.mcp_types import CallToolObservation
     from openenv.core.env_server.types import Action, Observation, State
 
 from fastmcp import FastMCP
@@ -883,33 +885,38 @@ class EnterpriseArena(MCPEnvironment):
             self._load_and_init_task(task_id)
         except Exception as e:
             logger.error(f"Failed to load task '{task_id}': {e}")
-            return Observation(done=False, reward=0.0, metadata={
-                "error": f"Failed to load task '{task_id}': {e}",
-                "tasks_dir": str(TASKS_DIR),
-            })
+            return CallToolObservation(
+                done=False, reward=0.0,
+                tool_name="reset",
+                result={"error": f"Failed to load task '{task_id}': {e}"},
+            )
 
         self._state = State(episode_id=self._episode_id, step_count=0)
 
-        return Observation(
+        reset_info = {
+            "status": "ready",
+            "task_id": task_id,
+            "task_name": self._task["task_name"],
+            "description": self._task["description"],
+            "objectives": self._task["objectives"],
+            "max_steps": self._max_steps,
+            "warning": "Sources may be unreliable. Verify critical information before acting.",
+            "instructions": (
+                "You are an AI enterprise agent at Nexus Corp. "
+                "Start with read_task_brief to understand your objectives. "
+                "Use query_crm, check_policy, read_docs, and ask_manager to gather information. "
+                "Use call_api to execute actions. Use submit_report to file reports. "
+                "Use resolve_ticket for support tickets. Use get_status to track progress. "
+                "IMPORTANT: Not all sources are reliable. Cross-check before acting."
+            ),
+        }
+
+        return CallToolObservation(
             done=False,
             reward=0.0,
-            metadata={
-                "status": "ready",
-                "task_id": task_id,
-                "task_name": self._task["task_name"],
-                "description": self._task["description"],
-                "objectives": self._task["objectives"],
-                "max_steps": self._max_steps,
-                "warning": "Sources may be unreliable. Verify critical information before acting.",
-                "instructions": (
-                    "You are an AI enterprise agent at Nexus Corp. "
-                    "Start with read_task_brief to understand your objectives. "
-                    "Use query_crm, check_policy, read_docs, and ask_manager to gather information. "
-                    "Use call_api to execute actions. Use submit_report to file reports. "
-                    "Use resolve_ticket for support tickets. Use get_status to track progress. "
-                    "IMPORTANT: Not all sources are reliable. Cross-check before acting."
-                ),
-            },
+            tool_name="reset",
+            result=reset_info,
+            metadata=reset_info,
         )
 
     def _step_impl(self, action, timeout_s=None, **kwargs):

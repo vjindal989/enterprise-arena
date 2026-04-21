@@ -61,7 +61,7 @@ class TestReset:
 
     def test_reset_invalid_task(self, env):
         obs = env.reset(task_id="nonexistent")
-        assert "error" in str(obs.metadata).lower()
+        assert "error" in str(obs.result).lower()
 
 
 # ---------- Tool Tests (via call_tool_direct) ----------

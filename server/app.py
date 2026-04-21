@@ -11,7 +11,7 @@ import logging
 from typing import Any, Dict, Optional
 
 from fastapi import Body
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 try:
     from openenv.core.env_server.http_server import create_app
@@ -24,10 +24,35 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Gradio sends form values as strings.  The framework deserialiser does NOT
+# convert `arguments` from str → dict, so CallToolAction.model_validate()
+# fails with "Input should be a valid dictionary".  Fix: a thin subclass
+# whose pre-validator parses the string.  Because this class is NOT in the
+# framework's _MCP_ACTION_TYPES dict, deserialize_action_with_preprocessing
+# falls through to general processing and calls our model_validate().
+# ---------------------------------------------------------------------------
+class _WebCallToolAction(CallToolAction):
+    @field_validator("arguments", mode="before")
+    @classmethod
+    def _parse_string_arguments(cls, v):
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:
+                return {}
+            try:
+                parsed = json.loads(v)
+                return parsed if isinstance(parsed, dict) else {}
+            except (json.JSONDecodeError, TypeError):
+                return {}
+        return v
+
+
 # Create base app (WebSocket, Playground, /health, /web)
 app = create_app(
     EnterpriseArena,
-    CallToolAction,
+    _WebCallToolAction,
     CallToolObservation,
     env_name="enterprise_arena",
 )
