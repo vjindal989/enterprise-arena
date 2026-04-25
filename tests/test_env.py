@@ -548,3 +548,79 @@ class TestEndToEnd:
         score = grade_task(grading_data)
         assert score["score"] > 0.7
         assert score["breakdown"]["task_completion"]["score"] == 1.0
+
+
+# ---------- Multi-Agent Auditor Tests ----------
+
+class TestAuditor:
+    def test_auditor_approves_valid_action(self, easy_env):
+        """Auditor should approve a valid deal close."""
+        result = easy_env.call_tool_direct("consult_auditor", {
+            "action_description": "Close DEAL-001 via /v2/deals/update",
+            "action_type": "deal_close",
+        })
+        assert result["source"] == "compliance_auditor"
+        assert result["approved"] is True
+        assert len(easy_env._auditor_consultations) == 1
+
+    def test_auditor_blocks_without_compliance(self, hard_env):
+        """Auditor should block deal close without compliance_id on hard task."""
+        result = hard_env.call_tool_direct("consult_auditor", {
+            "action_description": "Close DEAL-001 without compliance_id",
+            "action_type": "deal_close",
+        })
+        assert result["approved"] is False
+        assert any("compliance_id" in w for w in result.get("warnings", []))
+
+    def test_auditor_warns_refund(self, medium_env):
+        """Auditor should warn about refund resolution type."""
+        result = medium_env.call_tool_direct("consult_auditor", {
+            "action_description": "Resolve TKT-100 with refund",
+            "action_type": "ticket_resolve",
+        })
+        assert result["approved"] is True  # warning but not blocked
+        assert any("refund" in c.lower() or "CAUTION" in c for c in result.get("warnings", []) + result.get("conditions", []))
+
+    def test_auditor_blocks_deprecated_api(self, easy_env):
+        """Auditor should block v1 API calls after drift."""
+        _pin_drifts(easy_env, {"api_v2": 1})
+        easy_env._step_count = 2
+        easy_env._apply_pending_drifts()
+        result = easy_env.call_tool_direct("consult_auditor", {
+            "action_description": "Call /v1/deals/update endpoint to close deal",
+            "action_type": "api_call",
+        })
+        assert result["approved"] is False
+        assert any("deprecated" in w.lower() or "v1" in w.lower() for w in result.get("warnings", []))
+
+    def test_send_message(self, easy_env):
+        """send_message tool should work."""
+        result = easy_env.call_tool_direct("send_message", {
+            "recipient": "team",
+            "message": "Deal closing soon",
+        })
+        assert result["status"] == "sent"
+        assert "MSG-" in result["message_id"]
+
+
+# ---------- Dynamic Difficulty Tests ----------
+
+class TestDynamicDifficulty:
+    def test_grading_data_includes_new_fields(self, easy_env):
+        """Grading data should include auditor and difficulty fields."""
+        data = easy_env._get_grading_data()
+        assert "auditor_consultations" in data
+        assert "difficulty_adjustments" in data
+        assert data["difficulty_adjustments"] == 0
+
+    def test_tool_list_includes_new_tools(self, easy_env):
+        """Tool functions should include consult_auditor and send_message."""
+        assert "consult_auditor" in easy_env._tool_fns
+        assert "send_message" in easy_env._tool_fns
+
+    def test_task_brief_lists_new_tools(self, easy_env):
+        """Task brief should list the new tools."""
+        brief = easy_env.call_tool_direct("read_task_brief")
+        assert "consult_auditor" in brief["available_tools"]
+        assert "send_message" in brief["available_tools"]
+        assert "auditor" in brief["available_sources"]

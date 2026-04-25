@@ -216,7 +216,7 @@ function ArchDiagram() {
         </marker>
       </defs>
       {box('AI Agent', 'LLM / RL Policy', 30, 80, COLORS.accent)}
-      {box('MCP Tools', '9 Enterprise Tools', 230, 10, COLORS.green)}
+      {box('MCP Tools', '11 Enterprise Tools', 230, 10, COLORS.green)}
       {box('Drift Engine', 'Stochastic Chaos', 230, 80, COLORS.amber)}
       {box('Cascade Engine', 'Consequence Chains', 230, 150, COLORS.red)}
       {box('Grader', '5-Component Score', 430, 80, COLORS.accent)}
@@ -599,10 +599,10 @@ export default function App() {
         {/* Stats row */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 48, marginTop: 60, flexWrap: 'wrap' }}>
           {[
-            { n: 9, label: 'MCP Tools', suffix: '' },
+            { n: 11, label: 'MCP Tools', suffix: '' },
             { n: 3, label: 'Drift Types', suffix: '' },
             { n: 5, label: 'Grading Axes', suffix: '' },
-            { n: 40, label: 'Tests Passing', suffix: '/40' },
+            { n: 48, label: 'Tests Passing', suffix: '/48' },
           ].map(s => (
             <div key={s.label} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 36, fontWeight: 800, color: COLORS.white }}>

@@ -11,11 +11,11 @@ tags:
 
 # Enterprise Arena
 
-[![Tests](https://img.shields.io/badge/tests-40%2F40-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-48%2F48-brightgreen)]()
 [![OpenEnv](https://img.shields.io/badge/OpenEnv-v0.2.3-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
-An OpenEnv environment where AI agents navigate realistic enterprise workflows under **stochastic schema drift**, **adversarial information sources**, **functional trust degradation**, and **cascading consequences**.
+An OpenEnv environment where AI agents navigate realistic enterprise workflows under **stochastic schema drift**, **adversarial information sources**, **functional trust degradation**, **cascading consequences**, **multi-agent compliance auditing**, and **dynamic difficulty scaling**.
 
 **[Live Demo](https://vjindal26-enterprise-arena.hf.space)** · **[Playground](https://vjindal26-enterprise-arena.hf.space/web/)** · **[Blog](BLOG.md)**
 
@@ -27,6 +27,8 @@ An OpenEnv environment where AI agents navigate realistic enterprise workflows u
 | **Adversarial Actors** | Manager gives wrong advice. Documentation is outdated. Only CRM and policy are trustworthy |
 | **Cascading Consequences** | Wrong ticket resolution → client escalation 3 steps later. Missing compliance → regulatory audit |
 | **Functional Trust** | Trust scores change tool behavior. Low manager trust = unavailable. Low docs trust = reliability warnings |
+| **Multi-Agent Auditor** | A compliance auditor agent reviews and can block high-stakes actions before execution |
+| **Dynamic Difficulty** | Environment adapts mid-episode: fast recoveries trigger harder conditions, struggling agents get extensions |
 
 ## Tasks
 
@@ -97,7 +99,7 @@ curl -X POST http://localhost:8000/step \
   -d '{"action": {"tool_name": "read_task_brief", "arguments": {}}}'
 ```
 
-## 9 MCP Tools
+## 11 MCP Tools
 
 | Tool | Reliability | Description |
 |------|------------|-------------|
@@ -110,6 +112,8 @@ curl -X POST http://localhost:8000/step \
 | `submit_report` | Always works | File business reports |
 | `resolve_ticket` | Always works | Close support tickets |
 | `send_message` | Always works | Team communication |
+| `consult_auditor` | Always accurate | Multi-agent compliance review — can block actions |
+| `get_status` | Always accurate | Progress, trust scores, notifications |
 
 ## Architecture
 
@@ -118,6 +122,8 @@ Built on [OpenEnv](https://github.com/meta-pytorch/OpenEnv) v0.2.3:
 - Stochastic drift engine with seeded randomness
 - Deferred-event cascade system with countdown timers
 - Functional trust scores that modify tool behavior
+- Multi-agent compliance auditor that can approve/block actions
+- Dynamic difficulty scaling (adapts mid-episode to agent performance)
 - 5-component deterministic grader (no LLM judge)
-- React landing page + Gradio Playground
-- 40 unit tests, Docker deployment on HF Spaces
+- React landing page with live episode replay
+- 48 unit tests, Docker deployment on HF Spaces

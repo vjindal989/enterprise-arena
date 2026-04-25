@@ -376,6 +376,15 @@ class EnterpriseArena(MCPEnvironment):
         self._deprecated_call_count: int = 0          # repeated deprecated API calls
         self._api_cooldown_until: int = 0              # rate-limit cooldown step
 
+        # Multi-agent: compliance auditor state
+        self._auditor_consultations: List[Dict] = []
+        self._auditor_approvals: Dict[str, bool] = {}  # action_desc -> approved
+
+        # Dynamic difficulty
+        self._difficulty_adjustments: int = 0  # tracks how many times difficulty scaled
+        self._consecutive_successes: int = 0
+        self._consecutive_failures: int = 0
+
         # Trust scores (agent-visible, updated based on interactions)
         self._trust_scores = {
             "crm": 1.0,
@@ -404,8 +413,9 @@ class EnterpriseArena(MCPEnvironment):
                     "read_task_brief", "query_crm", "check_policy",
                     "ask_manager", "read_docs", "call_api",
                     "submit_report", "resolve_ticket", "get_status",
+                    "consult_auditor", "send_message",
                 ],
-                "available_sources": ["crm", "api", "docs", "manager", "policy"],
+                "available_sources": ["crm", "api", "docs", "manager", "policy", "auditor"],
                 "tip": "Verify information from multiple sources before acting. Sources may be outdated or incorrect.",
             }
 
@@ -768,6 +778,104 @@ class EnterpriseArena(MCPEnvironment):
                 "notifications": self._drain_notifications(),
             }
 
+        @mcp.tool
+        def consult_auditor(action_description: str, action_type: str = "general") -> dict:
+            """
+            Consult the compliance auditor (a second AI agent) before taking
+            a high-stakes action. The auditor reviews your proposed action
+            against current policies and may approve, block, or add conditions.
+            Args:
+                action_description: Description of the action you plan to take
+                action_type: Type — "deal_close", "ticket_resolve", "api_call", "report_submit", or "general"
+            """
+            self._actions_log.append({"tool": "consult_auditor", "args": {
+                "action_description": action_description, "action_type": action_type
+            }})
+
+            desc_lower = action_description.lower()
+            consultation = {
+                "step": self._step_count,
+                "action": action_description,
+                "type": action_type,
+            }
+
+            # Auditor logic: reviews against current state and policies
+            warnings = []
+            approved = True
+            conditions = []
+
+            if action_type == "deal_close" or ("close" in desc_lower and "deal" in desc_lower):
+                # Check if compliance_id exists
+                deal_id = None
+                for d in ["DEAL-001", "DEAL-002", "DEAL-003"]:
+                    if d.lower() in desc_lower or d in desc_lower:
+                        deal_id = d
+                        break
+                if deal_id:
+                    needs_compliance = (self._task or {}).get("expected_outcomes", {}).get("deal_has_compliance_id", False)
+                    if needs_compliance and deal_id not in self._compliance_ids:
+                        approved = False
+                        warnings.append(f"BLOCKED: Deal {deal_id} requires a compliance_id before closing. Generate one via /v2/compliance/generate first.")
+                    deal = CRM_DATA["deals"].get(deal_id, {})
+                    if deal.get("value", 0) > 50000:
+                        conditions.append("VP approval required for deals over $50,000.")
+                    # Check if API has drifted
+                    if "/v1/" in desc_lower and "api_v2" in self._applied_drifts:
+                        approved = False
+                        warnings.append("WARNING: v1 deal endpoints are deprecated. Use /v2/deals/update instead.")
+
+            if action_type == "ticket_resolve" or ("ticket" in desc_lower and action_type not in ("deal_close", "api_call")):
+                if "refund" in desc_lower:
+                    warnings.append("CAUTION: Refund resolution should only be used after verifying root cause. Check policy on complaint_handling.")
+                    conditions.append("Verify root cause with CRM and policy before using refund resolution type.")
+
+            if action_type == "api_call" or ("endpoint" in desc_lower and action_type == "general"):
+                if "/v1/deals" in desc_lower and "api_v2" in self._applied_drifts:
+                    approved = False
+                    warnings.append("BLOCKED: v1 deal endpoints are deprecated. Use v2.")
+
+            # Dynamic: if agent has been making mistakes, auditor becomes stricter
+            if self._consecutive_failures > 2:
+                conditions.append("HIGH RISK MODE: Multiple recent failures detected. Extra verification recommended before proceeding.")
+
+            consultation["approved"] = approved
+            consultation["warnings"] = warnings
+            consultation["conditions"] = conditions
+            self._auditor_consultations.append(consultation)
+            self._auditor_approvals[action_description[:100]] = approved
+
+            result = {
+                "source": "compliance_auditor",
+                "approved": approved,
+                "action_reviewed": action_description,
+            }
+            if warnings:
+                result["warnings"] = warnings
+            if conditions:
+                result["conditions"] = conditions
+            if approved:
+                result["message"] = "Action approved by compliance auditor. Proceed with caution."
+            else:
+                result["message"] = "Action BLOCKED by compliance auditor. Address the warnings before proceeding."
+                result["recommendation"] = "Review the warnings and take corrective steps before retrying."
+            return result
+
+        @mcp.tool
+        def send_message(recipient: str, message: str) -> dict:
+            """
+            Send a message to a team member or system.
+            Args:
+                recipient: Who to message — e.g. "team", "manager", "compliance", "client"
+                message: The message content
+            """
+            self._actions_log.append({"tool": "send_message", "args": {"recipient": recipient, "message": message}})
+            return {
+                "status": "sent",
+                "recipient": recipient,
+                "message_id": f"MSG-{uuid4().hex[:6].upper()}",
+                "note": f"Message delivered to {recipient}.",
+            }
+
         # Store tool functions for direct HTTP dispatch
         self._tool_fns = {
             "read_task_brief": read_task_brief,
@@ -779,6 +887,8 @@ class EnterpriseArena(MCPEnvironment):
             "submit_report": submit_report,
             "resolve_ticket": resolve_ticket,
             "get_status": get_status,
+            "consult_auditor": consult_auditor,
+            "send_message": send_message,
         }
 
         super().__init__(mcp)
@@ -834,6 +944,13 @@ class EnterpriseArena(MCPEnvironment):
         self._cascade_notifications = []
         self._deprecated_call_count = 0
         self._api_cooldown_until = 0
+
+        # Multi-agent + dynamic difficulty state
+        self._auditor_consultations = []
+        self._auditor_approvals = {}
+        self._difficulty_adjustments = 0
+        self._consecutive_successes = 0
+        self._consecutive_failures = 0
 
         # Resolve stochastic drift windows — pick a concrete trigger_step
         # from [min, max] range using episode-seeded RNG for reproducibility.
@@ -1089,6 +1206,47 @@ class EnterpriseArena(MCPEnvironment):
         self._cascade_notifications = []
         return msgs
 
+    def _apply_dynamic_difficulty(self):
+        """Adjust environment difficulty based on agent performance mid-episode.
+
+        If agent is doing well (recovering quickly, verifying sources), add
+        more pressure. If struggling, ease off slightly.
+        """
+        if not self._task or self._step_count < 5:
+            return
+
+        # Count recent successes/failures in last 5 actions
+        recent_actions = self._actions_log[-5:] if len(self._actions_log) >= 5 else self._actions_log
+        recent_api = [a for a in recent_actions if a["tool"] == "call_api"]
+        recent_errors = sum(1 for a in recent_api
+                            if any(c["endpoint"] in str(self._deprecated_endpoints)
+                                   for c in self._api_calls
+                                   if c["step"] == a.get("step", 0)))
+
+        # Track recovery speed
+        fast_recoveries = sum(1 for v in self._drift_recovery.values() if v <= 2)
+        slow_recoveries = sum(1 for v in self._drift_recovery.values() if v > 5)
+
+        # Scale UP: agent is doing well — make new topics unreliable
+        if fast_recoveries >= 2 and self._difficulty_adjustments < 2:
+            if "compliance" not in self._manager_wrong_topics:
+                self._manager_wrong_topics.append("compliance")
+                self._difficulty_adjustments += 1
+                self._cascade_notifications.append(
+                    "⚠ ENVIRONMENT ADAPTATION: Difficulty increased. "
+                    "Additional information sources may now be unreliable."
+                )
+
+        # Scale DOWN: agent is struggling — extend step limit
+        if slow_recoveries >= 2 and self._step_count > self._max_steps * 0.7:
+            if self._difficulty_adjustments > -1:
+                bonus_steps = min(10, self._max_steps // 5)
+                self._max_steps += bonus_steps
+                self._difficulty_adjustments -= 1
+                self._cascade_notifications.append(
+                    f"Step limit extended by {bonus_steps} steps due to environmental complexity."
+                )
+
     def _compute_reward(self) -> float:
         """Compute the composite reward score."""
         if not self._task:
@@ -1121,6 +1279,8 @@ class EnterpriseArena(MCPEnvironment):
             "drift_step": dict(self._drift_step),
             "trust_scores": dict(self._trust_scores),
             "active_cascades": list(self._active_cascades),
+            "auditor_consultations": list(self._auditor_consultations),
+            "difficulty_adjustments": self._difficulty_adjustments,
         }
 
     # ------------------------------------------------------------------
@@ -1183,6 +1343,9 @@ class EnterpriseArena(MCPEnvironment):
         # Apply any pending drift events
         self._apply_pending_drifts()
 
+        # Dynamic difficulty scaling
+        self._apply_dynamic_difficulty()
+
         if self._step_count >= self._max_steps:
             self._done = True
 
@@ -1211,6 +1374,7 @@ class EnterpriseArena(MCPEnvironment):
         self._step_count += 1
         self._state.step_count = self._step_count
         self._apply_pending_drifts()
+        self._apply_dynamic_difficulty()
 
         if self._step_count >= self._max_steps:
             self._done = True

@@ -1,6 +1,6 @@
 # Enterprise Arena: When the World Fights Back
 
-**TL;DR:** We built an OpenEnv environment where enterprise AI agents must navigate stochastic schema drift, adversarial coworkers, functional trust degradation, and cascading consequences — all while completing real business workflows. A naive agent scores 0.63. After LoRA fine-tuning on expert trajectories, it reaches 0.87 (+38% relative improvement). The environment is fully deterministic, has 40 unit tests, 5-axis grading, and three difficulty tiers.
+**TL;DR:** We built an OpenEnv environment where enterprise AI agents must navigate stochastic schema drift, adversarial coworkers, functional trust degradation, cascading consequences, a multi-agent compliance auditor, and dynamic difficulty scaling — all while completing real business workflows. A naive agent scores 0.63. After LoRA fine-tuning on expert trajectories, it reaches 0.87 (+38% relative improvement). The environment has 48 unit tests, 11 MCP tools, 5-axis grading, and three difficulty tiers.
 
 ---
 
@@ -71,6 +71,25 @@ The cascading system uses a deferred-event architecture: triggers enqueue events
 
 This means a single bad decision at step 8 can derail the entire episode at step 11 — exactly like real enterprise work.
 
+### 5. Multi-Agent Compliance Auditor
+
+High-stakes actions (closing deals, resolving tickets, submitting reports) can be reviewed by a **compliance auditor agent** via the `consult_auditor` tool. The auditor cross-references the action against current policies, drift state, and trust scores, then returns one of three verdicts:
+
+- **APPROVED** — proceed with confidence
+- **BLOCKED** — action violates a current policy (e.g., closing a deal without a compliance ID after a policy drift)
+- **WARNING** — action is risky but not forbidden (e.g., using a deprecated API endpoint)
+
+Smart agents learn to consult the auditor before irreversible actions. Naive agents skip it and get penalized by cascading consequences.
+
+### 6. Dynamic Difficulty Scaling
+
+The environment adapts **mid-episode** based on agent performance:
+
+- **Fast recovery** (3+ consecutive successes after a drift) → injects additional unreliable information sources
+- **Struggling** (3+ consecutive failures) → extends the step limit to prevent premature termination
+
+This prevents both sandbagging and memorization. An agent that recovers too quickly gets a harder environment; an agent that's genuinely trying gets a fair chance to recover.
+
 ## The Environment
 
 ### Three Tiers of Chaos
@@ -81,7 +100,7 @@ This means a single bad decision at step 8 can derail the entire episode at step
 | **Medium** | Deal + ticket + 2 reports | 2 | 3 | Escalation | 60 |
 | **Hard** | Full audit pipeline | 3 | 5 | Full chain | 100 |
 
-### 9 MCP Tools
+### 11 MCP Tools
 
 Built on FastMCP, the agent has access to:
 - `read_task_brief` — Current objectives and their completion status
@@ -93,6 +112,8 @@ Built on FastMCP, the agent has access to:
 - `resolve_ticket` — Close a support ticket with a resolution
 - `submit_report` — File reports (deal closure, compliance, incident, audit)
 - `send_message` — Communicate with team members
+- `consult_auditor` — Multi-agent compliance review (can approve/block actions)
+- `get_status` — Check progress, trust scores, and notifications
 
 ### The Hard Task: A Case Study
 
