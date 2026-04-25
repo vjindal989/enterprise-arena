@@ -471,6 +471,15 @@ class EnterpriseArena(MCPEnvironment):
 
             version = self._current_policy_version.get(topic, "v1")
             policy_text = POLICIES[topic].get(version, POLICIES[topic]["v1"])
+
+            # Track policy drift recovery: agent queries the changed policy
+            for drift_id, drift_step in self._drift_step.items():
+                if drift_id == "policy_threshold" and drift_id not in self._drift_recovery:
+                    # Find which policy this drift changed
+                    for drift_ev in (self._task or {}).get("drift_events", []):
+                        if drift_ev["id"] == drift_id and drift_ev.get("policy") == topic:
+                            self._drift_recovery[drift_id] = self._step_count - drift_step
+
             return {
                 "topic": topic,
                 "policy": policy_text,
@@ -1097,6 +1106,10 @@ class EnterpriseArena(MCPEnvironment):
             for drift_id, drift_step in self._drift_step.items():
                 if drift_id.startswith("api_") and drift_id not in self._drift_recovery:
                     if endpoint.startswith("/v2/"):
+                        self._drift_recovery[drift_id] = self._step_count - drift_step
+                # Track required_field recovery: agent includes the new field
+                if drift_id == "new_required_field" and drift_id not in self._drift_recovery:
+                    if "compliance_id" in payload:
                         self._drift_recovery[drift_id] = self._step_count - drift_step
 
             # Check if all deals are closed

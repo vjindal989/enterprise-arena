@@ -62,6 +62,15 @@ def _task_completion_score(data: Dict) -> Dict:
         elif obj_id in ("submit_audit_summary", "pass_audit"):
             completed = "audit_summary" in data["reports_submitted"]
 
+        # Cascade-injected objectives
+        elif obj_id == "handle_escalation":
+            res = data["ticket_resolutions"].get("TKT-200", {})
+            completed = res.get("resolution_type") == "technical_fix"
+
+        elif obj_id == "fix_compliance_gap":
+            completed = ("compliance" in data["reports_submitted"]
+                         and "deal_without_compliance" in data.get("active_cascades", []))
+
         score = 1.0 if completed else 0.0
         weighted_score += score * weight
         breakdown[obj_id] = {"completed": completed, "weight": weight, "score": score}

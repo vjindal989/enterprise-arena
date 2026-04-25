@@ -456,9 +456,9 @@ function EpisodeReplay() {
 /* ───────────────── Naive vs Smart comparison ───────────────── */
 
 const COMPARISON_DATA = [
-  { task: 'Easy', naive: 0.80, smart: 0.90 },
-  { task: 'Medium', naive: 0.59, smart: 0.90 },
-  { task: 'Hard', naive: 0.51, smart: 0.82 },
+  { task: 'Easy', naive: 0.61, smart: 0.94 },
+  { task: 'Medium', naive: 0.52, smart: 0.94 },
+  { task: 'Hard', naive: 0.34, smart: 0.86 },
 ]
 
 function ScoreComparison() {
@@ -660,7 +660,7 @@ export default function App() {
           Training Results
         </h2>
         <p style={{ textAlign: 'center', color: COLORS.textDim, marginBottom: 32, fontSize: 15 }}>
-          Naive vs. smart agent scores across all difficulty tiers. +38% average improvement after LoRA fine-tuning.
+          Naive vs. smart agent scores across all difficulty tiers. +86% average improvement after training on expert trajectories.
         </p>
         <ScoreComparison />
       </section>

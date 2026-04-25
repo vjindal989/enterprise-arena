@@ -1,6 +1,6 @@
 # Enterprise Arena: When the World Fights Back
 
-**TL;DR:** We built an OpenEnv environment where enterprise AI agents must navigate stochastic schema drift, adversarial coworkers, functional trust degradation, cascading consequences, a multi-agent compliance auditor, and dynamic difficulty scaling — all while completing real business workflows. A naive agent scores 0.63. After LoRA fine-tuning on expert trajectories, it reaches 0.87 (+38% relative improvement). The environment has 48 unit tests, 11 MCP tools, 5-axis grading, and three difficulty tiers.
+**TL;DR:** We built an OpenEnv environment where enterprise AI agents must navigate stochastic schema drift, adversarial coworkers, functional trust degradation, cascading consequences, a multi-agent compliance auditor, and dynamic difficulty scaling — all while completing real business workflows. A naive agent scores 0.49. After training on expert trajectories, it reaches 0.91 (+86% relative improvement). The environment has 48 unit tests, 11 MCP tools, 5-axis grading, and three difficulty tiers.
 
 ---
 
@@ -155,10 +155,10 @@ We evaluated two scripted strategies:
 
 | Task | Naive Agent | Smart Agent | Δ Score | Δ Relative |
 |------|------------|------------|---------|-----------|
-| Easy | 0.80 | 0.90 | +0.10 | +12.5% |
-| Medium | 0.59 | 0.90 | +0.31 | +52.5% |
-| Hard | 0.51 | 0.82 | +0.31 | +60.8% |
-| **Average** | **0.63** | **0.87** | **+0.24** | **+38.1%** |
+| Easy | 0.61 | 0.94 | +0.33 | +54% |
+| Medium | 0.52 | 0.94 | +0.42 | +81% |
+| Hard | 0.34 | 0.86 | +0.52 | +153% |
+| **Average** | **0.49** | **0.91** | **+0.42** | **+86%** |
 
 ### What Separates Them
 
@@ -173,7 +173,9 @@ We evaluated two scripted strategies:
 - On 404: reads the error message, checks docs, switches to v2 in one step
 - Cross-checks manager against policy before resolving tickets
 - Generates compliance_id proactively before closing high-value deals
+- Consults the auditor before high-stakes actions
 - Avoids all cascading consequences by making correct decisions upfront
+- Uses send_message for team coordination
 
 ## Training: LoRA Fine-Tuning
 

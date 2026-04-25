@@ -52,10 +52,10 @@ An OpenEnv environment where AI agents navigate realistic enterprise workflows u
 
 | Task | Naive | Smart | Δ |
 |------|-------|-------|---|
-| Easy | 0.80 | 0.90 | +12.5% |
-| Medium | 0.59 | 0.90 | +52.5% |
-| Hard | 0.51 | 0.82 | +60.8% |
-| **Avg** | **0.63** | **0.87** | **+38.1%** |
+| Easy | 0.61 | 0.94 | +54% |
+| Medium | 0.52 | 0.94 | +81% |
+| Hard | 0.34 | 0.86 | +153% |
+| **Avg** | **0.49** | **0.91** | **+86%** |
 
 ## Quick Start
 

@@ -2,67 +2,16 @@
   "easy_naive": {
     "task_id": "easy",
     "strategy": "naive",
-    "score": 0.7969,
+    "score": 0.6075,
     "breakdown": {
       "task_completion": {
-        "score": 1.0,
-        "weight": 0.4,
+        "score": 0.4,
+        "weight": 0.35,
         "details": {
           "close_deal": {
-            "completed": true,
+            "completed": false,
             "weight": 0.6,
-            "score": 1.0
-          },
-          "submit_report": {
-            "completed": true,
-            "weight": 0.4,
-            "score": 1.0
-          }
-        }
-      },
-      "source_accuracy": {
-        "score": 1.0,
-        "weight": 0.3,
-        "details": {
-          "no_adversarial_sources": true
-        }
-      },
-      "drift_adaptation": {
-        "score": 0.0,
-        "weight": 0.2,
-        "details": {
-          "api_v2": {
-            "recovery_steps": "never_recovered",
             "score": 0.0
-          }
-        }
-      },
-      "efficiency": {
-        "score": 0.96875,
-        "weight": 0.1,
-        "details": {
-          "steps_used": 9,
-          "optimal": 8,
-          "max": 40
-        }
-      }
-    },
-    "steps": 9,
-    "done": true
-  },
-  "easy_smart": {
-    "task_id": "easy",
-    "strategy": "smart",
-    "score": 0.8969,
-    "breakdown": {
-      "task_completion": {
-        "score": 1.0,
-        "weight": 0.4,
-        "details": {
-          "close_deal": {
-            "completed": true,
-            "weight": 0.6,
-            "score": 1.0
           },
           "submit_report": {
             "completed": true,
@@ -73,7 +22,7 @@
       },
       "source_accuracy": {
         "score": 1.0,
-        "weight": 0.3,
+        "weight": 0.25,
         "details": {
           "no_adversarial_sources": true
         }
@@ -88,27 +37,100 @@
           }
         }
       },
-      "efficiency": {
-        "score": 0.96875,
+      "cascade_recovery": {
+        "score": 0.3,
         "weight": 0.1,
         "details": {
-          "steps_used": 9,
+          "cascades_triggered": 1,
+          "cascades_resolved": 0,
+          "details": {
+            "api_cooldown": {
+              "resolved": false,
+              "note": "rate_limited"
+            }
+          }
+        }
+      },
+      "efficiency": {
+        "score": 0.875,
+        "weight": 0.1,
+        "details": {
+          "steps_used": 12,
           "optimal": 8,
           "max": 40
         }
       }
     },
-    "steps": 9,
+    "steps": 12,
+    "done": false
+  },
+  "easy_smart": {
+    "task_id": "easy",
+    "strategy": "smart",
+    "score": 0.935,
+    "breakdown": {
+      "task_completion": {
+        "score": 1.0,
+        "weight": 0.35,
+        "details": {
+          "close_deal": {
+            "completed": true,
+            "weight": 0.6,
+            "score": 1.0
+          },
+          "submit_report": {
+            "completed": true,
+            "weight": 0.4,
+            "score": 1.0
+          }
+        }
+      },
+      "source_accuracy": {
+        "score": 1.0,
+        "weight": 0.25,
+        "details": {
+          "no_adversarial_sources": true
+        }
+      },
+      "drift_adaptation": {
+        "score": 0.8,
+        "weight": 0.2,
+        "details": {
+          "api_v2": {
+            "recovery_steps": 3,
+            "score": 0.8
+          }
+        }
+      },
+      "cascade_recovery": {
+        "score": 1.0,
+        "weight": 0.1,
+        "details": {
+          "no_cascades_triggered": true,
+          "mistakes_avoided": true
+        }
+      },
+      "efficiency": {
+        "score": 0.75,
+        "weight": 0.1,
+        "details": {
+          "steps_used": 16,
+          "optimal": 8,
+          "max": 40
+        }
+      }
+    },
+    "steps": 16,
     "done": true
   },
   "medium_naive": {
     "task_id": "medium",
     "strategy": "naive",
-    "score": 0.59,
+    "score": 0.518,
     "breakdown": {
       "task_completion": {
-        "score": 0.7,
-        "weight": 0.4,
+        "score": 0.6086956521739131,
+        "weight": 0.35,
         "details": {
           "close_deal": {
             "completed": true,
@@ -129,12 +151,17 @@
             "completed": true,
             "weight": 0.25,
             "score": 1.0
+          },
+          "handle_escalation": {
+            "completed": false,
+            "weight": 0.15,
+            "score": 0.0
           }
         }
       },
       "source_accuracy": {
         "score": 0.7,
-        "weight": 0.3,
+        "weight": 0.25,
         "details": {
           "wrong_info_events": 1,
           "verified": 1,
@@ -148,6 +175,19 @@
           "api_v2": {
             "recovery_steps": "never_recovered",
             "score": 0.0
+          }
+        }
+      },
+      "cascade_recovery": {
+        "score": 0.3,
+        "weight": 0.1,
+        "details": {
+          "cascades_triggered": 1,
+          "cascades_resolved": 0,
+          "details": {
+            "wrong_ticket_resolution": {
+              "resolved": false
+            }
           }
         }
       },
@@ -162,16 +202,16 @@
       }
     },
     "steps": 12,
-    "done": true
+    "done": false
   },
   "medium_smart": {
     "task_id": "medium",
     "strategy": "smart",
-    "score": 0.9,
+    "score": 0.9367,
     "breakdown": {
       "task_completion": {
         "score": 1.0,
-        "weight": 0.4,
+        "weight": 0.35,
         "details": {
           "close_deal": {
             "completed": true,
@@ -197,143 +237,7 @@
       },
       "source_accuracy": {
         "score": 1.0,
-        "weight": 0.3,
-        "details": {
-          "wrong_info_events": 1,
-          "verified": 1,
-          "ticket_resolution_correct": true
-        }
-      },
-      "drift_adaptation": {
-        "score": 0.5,
-        "weight": 0.2,
-        "details": {
-          "api_v2": {
-            "recovery_steps": "unknown",
-            "score": 0.5
-          }
-        }
-      },
-      "efficiency": {
-        "score": 1.0,
-        "weight": 0.1,
-        "details": {
-          "steps_used": 13,
-          "optimal": 15,
-          "max": 60
-        }
-      }
-    },
-    "steps": 13,
-    "done": true
-  },
-  "hard_naive": {
-    "task_id": "hard",
-    "strategy": "naive",
-    "score": 0.51,
-    "breakdown": {
-      "task_completion": {
-        "score": 0.15,
-        "weight": 0.4,
-        "details": {
-          "close_deal": {
-            "completed": false,
-            "weight": 0.2,
-            "score": 0.0
-          },
-          "resolve_ticket": {
-            "completed": false,
-            "weight": 0.2,
-            "score": 0.0
-          },
-          "submit_compliance_report": {
-            "completed": false,
-            "weight": 0.25,
-            "score": 0.0
-          },
-          "submit_audit_summary": {
-            "completed": false,
-            "weight": 0.2,
-            "score": 0.0
-          },
-          "submit_incident_report": {
-            "completed": true,
-            "weight": 0.15,
-            "score": 1.0
-          }
-        }
-      },
-      "source_accuracy": {
-        "score": 0.7,
-        "weight": 0.3,
-        "details": {
-          "wrong_info_events": 1,
-          "verified": 1,
-          "ticket_resolution_correct": false
-        }
-      },
-      "drift_adaptation": {
-        "score": 0.7,
-        "weight": 0.2,
-        "details": {
-          "api_v2": {
-            "recovery_steps": 4,
-            "score": 0.7
-          }
-        }
-      },
-      "efficiency": {
-        "score": 1.0,
-        "weight": 0.1,
-        "details": {
-          "steps_used": 15,
-          "optimal": 25,
-          "max": 100
-        }
-      }
-    },
-    "steps": 15,
-    "done": false
-  },
-  "hard_smart": {
-    "task_id": "hard",
-    "strategy": "smart",
-    "score": 0.82,
-    "breakdown": {
-      "task_completion": {
-        "score": 0.8,
-        "weight": 0.4,
-        "details": {
-          "close_deal": {
-            "completed": false,
-            "weight": 0.2,
-            "score": 0.0
-          },
-          "resolve_ticket": {
-            "completed": true,
-            "weight": 0.2,
-            "score": 1.0
-          },
-          "submit_compliance_report": {
-            "completed": true,
-            "weight": 0.25,
-            "score": 1.0
-          },
-          "submit_audit_summary": {
-            "completed": true,
-            "weight": 0.2,
-            "score": 1.0
-          },
-          "submit_incident_report": {
-            "completed": true,
-            "weight": 0.15,
-            "score": 1.0
-          }
-        }
-      },
-      "source_accuracy": {
-        "score": 1.0,
-        "weight": 0.3,
+        "weight": 0.25,
         "details": {
           "wrong_info_events": 2,
           "verified": 2,
@@ -341,12 +245,110 @@
         }
       },
       "drift_adaptation": {
-        "score": 0.5,
+        "score": 0.75,
         "weight": 0.2,
         "details": {
           "api_v2": {
-            "recovery_steps": "unknown",
-            "score": 0.5
+            "recovery_steps": 7,
+            "score": 0.4
+          },
+          "policy_threshold": {
+            "recovery_steps": 0,
+            "score": 1.1
+          }
+        }
+      },
+      "cascade_recovery": {
+        "score": 1.0,
+        "weight": 0.1,
+        "details": {
+          "no_cascades_triggered": true,
+          "mistakes_avoided": true
+        }
+      },
+      "efficiency": {
+        "score": 0.8666666666666667,
+        "weight": 0.1,
+        "details": {
+          "steps_used": 21,
+          "optimal": 15,
+          "max": 60
+        }
+      }
+    },
+    "steps": 21,
+    "done": true
+  },
+  "hard_naive": {
+    "task_id": "hard",
+    "strategy": "naive",
+    "score": 0.34,
+    "breakdown": {
+      "task_completion": {
+        "score": 0.1,
+        "weight": 0.35,
+        "details": {
+          "close_deal": {
+            "completed": false,
+            "weight": 0.2,
+            "score": 0.0
+          },
+          "resolve_ticket": {
+            "completed": false,
+            "weight": 0.2,
+            "score": 0.0
+          },
+          "submit_compliance_report": {
+            "completed": false,
+            "weight": 0.2,
+            "score": 0.0
+          },
+          "submit_audit_summary": {
+            "completed": false,
+            "weight": 0.15,
+            "score": 0.0
+          },
+          "submit_incident_report": {
+            "completed": true,
+            "weight": 0.1,
+            "score": 1.0
+          },
+          "handle_escalation": {
+            "completed": false,
+            "weight": 0.15,
+            "score": 0.0
+          }
+        }
+      },
+      "source_accuracy": {
+        "score": 0.7,
+        "weight": 0.25,
+        "details": {
+          "wrong_info_events": 1,
+          "verified": 1,
+          "ticket_resolution_correct": false
+        }
+      },
+      "drift_adaptation": {
+        "score": 0.0,
+        "weight": 0.2,
+        "details": {
+          "api_v2": {
+            "recovery_steps": "never_recovered",
+            "score": 0.0
+          }
+        }
+      },
+      "cascade_recovery": {
+        "score": 0.3,
+        "weight": 0.1,
+        "details": {
+          "cascades_triggered": 1,
+          "cascades_resolved": 0,
+          "details": {
+            "wrong_ticket_resolution": {
+              "resolved": false
+            }
           }
         }
       },
@@ -354,13 +356,107 @@
         "score": 1.0,
         "weight": 0.1,
         "details": {
-          "steps_used": 15,
+          "steps_used": 12,
           "optimal": 25,
           "max": 100
         }
       }
     },
-    "steps": 15,
+    "steps": 12,
+    "done": false
+  },
+  "hard_smart": {
+    "task_id": "hard",
+    "strategy": "smart",
+    "score": 0.8587,
+    "breakdown": {
+      "task_completion": {
+        "score": 1.0,
+        "weight": 0.35,
+        "details": {
+          "close_deal": {
+            "completed": true,
+            "weight": 0.2,
+            "score": 1.0
+          },
+          "resolve_ticket": {
+            "completed": true,
+            "weight": 0.2,
+            "score": 1.0
+          },
+          "submit_compliance_report": {
+            "completed": true,
+            "weight": 0.2,
+            "score": 1.0
+          },
+          "submit_audit_summary": {
+            "completed": true,
+            "weight": 0.15,
+            "score": 1.0
+          },
+          "submit_incident_report": {
+            "completed": true,
+            "weight": 0.1,
+            "score": 1.0
+          },
+          "fix_compliance_gap": {
+            "completed": true,
+            "weight": 0.15,
+            "score": 1.0
+          }
+        }
+      },
+      "source_accuracy": {
+        "score": 1.0,
+        "weight": 0.25,
+        "details": {
+          "wrong_info_events": 6,
+          "verified": 6,
+          "ticket_resolution_correct": true
+        }
+      },
+      "drift_adaptation": {
+        "score": 0.3666666666666667,
+        "weight": 0.2,
+        "details": {
+          "api_v2": {
+            "recovery_steps": 5,
+            "score": 0.6
+          },
+          "policy_threshold": {
+            "recovery_steps": "unknown",
+            "score": 0.5
+          },
+          "new_required_field": {
+            "recovery_steps": 13,
+            "score": 0.0
+          }
+        }
+      },
+      "cascade_recovery": {
+        "score": 1.0,
+        "weight": 0.1,
+        "details": {
+          "cascades_triggered": 1,
+          "cascades_resolved": 1,
+          "details": {
+            "deal_without_compliance": {
+              "resolved": true
+            }
+          }
+        }
+      },
+      "efficiency": {
+        "score": 0.8533333333333333,
+        "weight": 0.1,
+        "details": {
+          "steps_used": 36,
+          "optimal": 25,
+          "max": 100
+        }
+      }
+    },
+    "steps": 36,
     "done": true
   }
 }
