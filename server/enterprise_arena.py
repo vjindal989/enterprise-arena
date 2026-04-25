@@ -8,6 +8,7 @@ schema drift, adversarial actors, and cascading consequences.
 import json
 import logging
 import os
+import random
 from copy import deepcopy
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
@@ -58,7 +59,25 @@ CRM_DATA = {
             "product": "Enterprise Suite",
             "notes": "Client wants 15% discount. Account is in good standing. VP sign-off may be needed.",
             "created": "2026-03-01",
-        }
+        },
+        "DEAL-002": {
+            "client": "Bolt Industries",
+            "client_id": "bolt-ind",
+            "value": 120000,
+            "stage": "qualification",
+            "product": "Platform Pro + Analytics Add-on",
+            "notes": "New client, fast-tracking. Needs security review before close. CEO directly involved.",
+            "created": "2026-04-05",
+        },
+        "DEAL-003": {
+            "client": "Cedar Health",
+            "client_id": "cedar-health",
+            "value": 45000,
+            "stage": "prospecting",
+            "product": "Starter Package",
+            "notes": "Healthcare vertical — strict compliance requirements. Budget approved Q2.",
+            "created": "2026-04-12",
+        },
     },
     "clients": {
         "acme-corp": {
@@ -68,7 +87,23 @@ CRM_DATA = {
             "industry": "manufacturing",
             "annual_revenue": "$50M",
             "active_since": "2024-01",
-        }
+        },
+        "bolt-ind": {
+            "name": "Bolt Industries",
+            "tier": "silver",
+            "contact": "lisa.chen@bolt-ind.com",
+            "industry": "logistics",
+            "annual_revenue": "$200M",
+            "active_since": "2026-03",
+        },
+        "cedar-health": {
+            "name": "Cedar Health",
+            "tier": "bronze",
+            "contact": "raj.patel@cedarhealth.io",
+            "industry": "healthcare",
+            "annual_revenue": "$30M",
+            "active_since": "2026-04",
+        },
     },
     "tickets": {
         "TKT-100": {
@@ -79,7 +114,68 @@ CRM_DATA = {
             "status": "open",
             "created": "2026-04-18",
             "sla_deadline": "2026-04-21",
-        }
+        },
+        "TKT-101": {
+            "client": "Bolt Industries",
+            "client_id": "bolt-ind",
+            "issue": "SSO login intermittently fails with 503 errors. Affects ~20% of login attempts. Started after platform update last Tuesday.",
+            "priority": "medium",
+            "status": "open",
+            "created": "2026-04-19",
+            "sla_deadline": "2026-04-26",
+        },
+        "TKT-102": {
+            "client": "Cedar Health",
+            "client_id": "cedar-health",
+            "issue": "HIPAA audit log missing entries for March 15-18. Compliance team flagged during quarterly review. May affect certification renewal.",
+            "priority": "critical",
+            "status": "open",
+            "created": "2026-04-20",
+            "sla_deadline": "2026-04-22",
+        },
+    },
+}
+
+# ---------------------------------------------------------------------------
+# Cascading event templates — triggered by agent mistakes
+# ---------------------------------------------------------------------------
+CASCADE_EVENTS = {
+    "wrong_ticket_resolution": {
+        "trigger": "resolve_ticket_wrong_type",
+        "delay_steps": 3,
+        "description": "Client escalated complaint after incorrect resolution",
+        "new_ticket": {
+            "id": "TKT-200",
+            "client": "Acme Corp",
+            "client_id": "acme-corp",
+            "issue": "ESCALATION: Previous resolution (refund) did not fix the data export issue. Client VP called demanding immediate technical resolution. Original SLA is now breached.",
+            "priority": "critical",
+            "status": "open",
+            "created": "2026-04-21",
+            "sla_deadline": "2026-04-22",
+        },
+        "objective_id": "handle_escalation",
+        "objective": {
+            "description": "Resolve the escalated ticket TKT-200 with a proper technical_fix",
+            "weight": 0.15,
+        },
+    },
+    "deal_without_compliance": {
+        "trigger": "close_deal_no_compliance",
+        "delay_steps": 5,
+        "description": "Compliance audit triggered — deal closed without required compliance_id",
+        "notification": "COMPLIANCE ALERT: Deal {deal_id} was closed without a compliance ID. An audit review has been initiated. You must generate a compliance_id and submit a corrective compliance report to avoid penalties.",
+        "objective_id": "fix_compliance_gap",
+        "objective": {
+            "description": "Submit a corrective compliance report with a valid compliance_id for the flagged deal",
+            "weight": 0.15,
+        },
+    },
+    "api_call_to_deprecated": {
+        "trigger": "repeated_deprecated_calls",
+        "threshold": 3,
+        "description": "Rate-limited after repeated calls to deprecated endpoints",
+        "cooldown_steps": 2,
     },
 }
 
@@ -273,6 +369,13 @@ class EnterpriseArena(MCPEnvironment):
         self._manager_wrong_topics: List[str] = []
         self._docs_outdated_topics: List[str] = []
 
+        # Cascading consequences
+        self._pending_cascades: List[Dict] = []   # {event_key, trigger_at_step, ...}
+        self._active_cascades: Set[str] = set()     # cascade event keys already fired
+        self._cascade_notifications: List[str] = []  # queued messages for agent
+        self._deprecated_call_count: int = 0          # repeated deprecated API calls
+        self._api_cooldown_until: int = 0              # rate-limit cooldown step
+
         # Trust scores (agent-visible, updated based on interactions)
         self._trust_scores = {
             "crm": 1.0,
@@ -378,6 +481,21 @@ class EnterpriseArena(MCPEnvironment):
             self._actions_log.append({"tool": "ask_manager", "args": {"question": question}})
             question_lower = question.lower()
 
+            # Functional trust: if manager trust is very low, manager is unavailable
+            if self._trust_scores["manager"] < 0.35:
+                self._manager_queries.append({
+                    "step": self._step_count,
+                    "question": question,
+                    "topic": "unavailable",
+                    "was_correct": None,
+                })
+                return {
+                    "source": "manager",
+                    "response": "I'm in back-to-back meetings right now and can't look into this. Try checking the docs or policy system instead.",
+                    "caveat": "Manager is currently unavailable. You'll need to rely on other sources.",
+                    "manager_available": False,
+                }
+
             # Determine topic
             topic = "general"
             if any(w in question_lower for w in ["deal", "approval", "close", "discount", "vp"]):
@@ -429,12 +547,21 @@ class EnterpriseArena(MCPEnvironment):
             if is_outdated and DOCS[topic].get("outdated"):
                 self._wrong_info_given += 1
 
-            return {
+            # Functional trust: low docs trust adds a staleness warning
+            warning = None
+            if self._trust_scores["docs"] < 0.5:
+                warning = ("WARNING: Documentation reliability is degraded due to recent system changes. "
+                           "Cross-reference with the policy system or API responses before acting on this information.")
+
+            result = {
                 "topic": topic,
                 "content": content,
                 "source": "documentation",
                 "note": "Documentation may not reflect the most recent changes." if is_outdated else "Documentation is up to date.",
             }
+            if warning:
+                result["reliability_warning"] = warning
+            return result
 
         @mcp.tool
         def call_api(endpoint: str, method: str = "POST", data: str = "{}") -> dict:
@@ -457,8 +584,28 @@ class EnterpriseArena(MCPEnvironment):
             self._actions_log.append({"tool": "call_api", "args": {"endpoint": endpoint, "method": method, "data": payload}})
             self._api_calls.append({"step": self._step_count, "endpoint": endpoint, "data": payload})
 
+            # Cascading: rate-limit after too many deprecated calls
+            if self._step_count < self._api_cooldown_until:
+                return {
+                    "status": 429,
+                    "error": "API rate-limited. Too many requests to deprecated endpoints. Try again in a few steps.",
+                    "retry_after_step": self._api_cooldown_until,
+                    "source": "api",
+                }
+
             # Check if endpoint exists
             if endpoint in self._deprecated_endpoints:
+                # Track deprecated call count for cascading
+                self._deprecated_call_count += 1
+                cascade_cfg = CASCADE_EVENTS.get("api_call_to_deprecated", {})
+                threshold = cascade_cfg.get("threshold", 3)
+                if self._deprecated_call_count >= threshold and "api_cooldown" not in self._active_cascades:
+                    cooldown = cascade_cfg.get("cooldown_steps", 2)
+                    self._api_cooldown_until = self._step_count + cooldown
+                    self._active_cascades.add("api_cooldown")
+                    self._trust_scores["api"] = max(0.2, self._trust_scores["api"] - 0.3)
+
+                # Find the drift that deprecated this endpoint
                 # Find the drift that deprecated this endpoint
                 for drift in (self._task or {}).get("drift_events", []):
                     if drift.get("old_endpoint") == endpoint:
@@ -566,6 +713,18 @@ class EnterpriseArena(MCPEnvironment):
                 "step": self._step_count,
             }
 
+            # Cascading: wrong resolution type triggers client escalation
+            expected_type = (self._task or {}).get("expected_outcomes", {}).get("ticket_resolution_type")
+            if expected_type and resolution_type != expected_type and "wrong_ticket_resolution" not in self._active_cascades:
+                cascade = CASCADE_EVENTS["wrong_ticket_resolution"]
+                trigger_at = self._step_count + cascade["delay_steps"]
+                self._pending_cascades.append({
+                    "event_key": "wrong_ticket_resolution",
+                    "trigger_at_step": trigger_at,
+                    "cascade": cascade,
+                })
+                self._trust_scores["manager"] = max(0.1, self._trust_scores["manager"] - 0.2)
+
             remaining_tickets = [
                 t for t in self._task.get("active_tickets", [])
                 if t not in self._ticket_statuses
@@ -606,6 +765,7 @@ class EnterpriseArena(MCPEnvironment):
                 "total": total,
                 "trust_scores": self._trust_scores,
                 "done": self._done,
+                "notifications": self._drain_notifications(),
             }
 
         # Store tool functions for direct HTTP dispatch
@@ -668,6 +828,24 @@ class EnterpriseArena(MCPEnvironment):
         self._actions_log = []
         self._trust_scores = {"crm": 1.0, "api": 1.0, "docs": 0.8, "manager": 0.7, "policy": 1.0}
 
+        # Cascading state
+        self._pending_cascades = []
+        self._active_cascades = set()
+        self._cascade_notifications = []
+        self._deprecated_call_count = 0
+        self._api_cooldown_until = 0
+
+        # Resolve stochastic drift windows — pick a concrete trigger_step
+        # from [min, max] range using episode-seeded RNG for reproducibility.
+        seed = hash(self._episode_id) & 0xFFFFFFFF
+        rng = random.Random(seed)
+        for drift in self._task.get("drift_events", []):
+            if "trigger_step_range" in drift:
+                lo, hi = drift["trigger_step_range"]
+                drift["trigger_step"] = rng.randint(lo, hi)
+            # Ensure trigger_step exists (backward compat)
+            drift.setdefault("trigger_step", 0)
+
     def _apply_pending_drifts(self):
         """Apply any drift events scheduled for the current step."""
         if not self._task:
@@ -677,6 +855,53 @@ class EnterpriseArena(MCPEnvironment):
                 continue
             if self._step_count >= drift["trigger_step"]:
                 self._apply_drift(drift)
+
+        # Also fire any pending cascading consequences
+        self._apply_pending_cascades()
+
+    def _apply_pending_cascades(self):
+        """Fire cascading consequences whose trigger step has arrived."""
+        still_pending = []
+        for pc in self._pending_cascades:
+            if pc["event_key"] in self._active_cascades:
+                continue
+            if self._step_count >= pc["trigger_at_step"]:
+                self._fire_cascade(pc)
+            else:
+                still_pending.append(pc)
+        self._pending_cascades = still_pending
+
+    def _fire_cascade(self, pc: Dict):
+        """Execute a cascading consequence."""
+        key = pc["event_key"]
+        self._active_cascades.add(key)
+        cascade = pc["cascade"]
+        logger.info(f"Cascade fired: {key} at step {self._step_count}")
+
+        # Inject new ticket into CRM if specified
+        if "new_ticket" in cascade:
+            new_tkt = cascade["new_ticket"]
+            CRM_DATA["tickets"][new_tkt["id"]] = deepcopy(new_tkt)
+            # Add to active tickets for this task
+            if self._task:
+                active = self._task.setdefault("active_tickets", [])
+                if new_tkt["id"] not in active:
+                    active.append(new_tkt["id"])
+
+        # Inject new objective if specified
+        if "objective_id" in cascade and self._task:
+            obj_id = cascade["objective_id"]
+            if obj_id not in self._task.get("objectives", {}):
+                self._task.setdefault("objectives", {})[obj_id] = cascade["objective"]
+
+        # Queue notification for agent
+        if "notification" in cascade:
+            msg = cascade["notification"]
+            if "deal_id" in pc:
+                msg = msg.replace("{deal_id}", pc["deal_id"])
+            self._cascade_notifications.append(msg)
+        elif "description" in cascade:
+            self._cascade_notifications.append(f"ALERT: {cascade['description']}")
 
     def _apply_drift(self, drift: Dict):
         """Apply a single drift event."""
@@ -736,6 +961,20 @@ class EnterpriseArena(MCPEnvironment):
             if "compliance_id" in payload:
                 result["compliance_id"] = payload["compliance_id"]
                 self._compliance_ids[deal_id] = payload["compliance_id"]
+
+            # Cascading: closing a deal without compliance_id when required
+            needs_compliance = (self._task or {}).get("expected_outcomes", {}).get("deal_has_compliance_id", False)
+            if (stage == "closed-won" and needs_compliance
+                    and "compliance_id" not in payload
+                    and "deal_without_compliance" not in self._active_cascades):
+                cascade = CASCADE_EVENTS["deal_without_compliance"]
+                trigger_at = self._step_count + cascade["delay_steps"]
+                self._pending_cascades.append({
+                    "event_key": "deal_without_compliance",
+                    "trigger_at_step": trigger_at,
+                    "cascade": cascade,
+                    "deal_id": deal_id,
+                })
 
             # Check drift recovery
             for drift_id, drift_step in self._drift_step.items():
@@ -824,6 +1063,13 @@ class EnterpriseArena(MCPEnvironment):
             return "audit_summary" in self._reports_submitted
         elif obj_id == "pass_audit":
             return "audit_summary" in self._reports_submitted
+        # Cascade-injected objectives
+        elif obj_id == "handle_escalation":
+            res = self._ticket_resolutions.get("TKT-200", {})
+            return res.get("resolution_type") == "technical_fix"
+        elif obj_id == "fix_compliance_gap":
+            # Agent must submit a corrective compliance report after the cascade
+            return "compliance" in self._reports_submitted and "deal_without_compliance" in self._active_cascades
         return False
 
     def _check_done(self):
@@ -836,6 +1082,12 @@ class EnterpriseArena(MCPEnvironment):
         )
         if all_done:
             self._done = True
+
+    def _drain_notifications(self) -> List[str]:
+        """Return and clear pending cascade notifications."""
+        msgs = list(self._cascade_notifications)
+        self._cascade_notifications = []
+        return msgs
 
     def _compute_reward(self) -> float:
         """Compute the composite reward score."""
@@ -855,20 +1107,20 @@ class EnterpriseArena(MCPEnvironment):
         """Collect all data needed for grading."""
         return {
             "task": self._task,
-            "deal_stages": self._deal_stages,
-            "ticket_resolutions": self._ticket_resolutions,
-            "reports_submitted": self._reports_submitted,
-            "compliance_ids": self._compliance_ids,
-            "api_calls": self._api_calls,
-            "manager_queries": self._manager_queries,
-            "drift_recovery": self._drift_recovery,
-            "drift_step": self._drift_step,
-            "applied_drifts": list(self._applied_drifts),
-            "wrong_info_given": self._wrong_info_given,
-            "wrong_info_acted_on": self._wrong_info_acted_on,
             "step_count": self._step_count,
             "max_steps": self._max_steps,
-            "actions_log": self._actions_log,
+            "deal_stages": dict(self._deal_stages),
+            "ticket_resolutions": dict(self._ticket_resolutions),
+            "reports_submitted": dict(self._reports_submitted),
+            "compliance_ids": dict(self._compliance_ids),
+            "manager_queries": list(self._manager_queries),
+            "api_calls": list(self._api_calls),
+            "actions_log": list(self._actions_log),
+            "applied_drifts": list(self._applied_drifts),
+            "drift_recovery": dict(self._drift_recovery),
+            "drift_step": dict(self._drift_step),
+            "trust_scores": dict(self._trust_scores),
+            "active_cascades": list(self._active_cascades),
         }
 
     # ------------------------------------------------------------------

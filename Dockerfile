@@ -1,9 +1,14 @@
 ARG BASE_IMAGE=ghcr.io/meta-pytorch/openenv-base:latest
+
+# ── Build Python deps ──
 FROM ghcr.io/meta-pytorch/openenv-base:latest AS builder
 
 WORKDIR /app
 
 COPY . /app/env
+
+# static/ directory is pre-built and included in the repo
+# (built locally via: cd landing && npm run build)
 
 WORKDIR /app/env
 

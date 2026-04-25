@@ -8,9 +8,12 @@ with a singleton environment for stateful multi-step episodes.
 import inspect
 import json
 import logging
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from fastapi import Body
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, field_validator
 
 try:
@@ -58,7 +61,7 @@ app = create_app(
 )
 
 # Remove framework's HTTP routes — use our singleton routes instead
-_override_paths = {"/step", "/reset", "/state"}
+_override_paths = {"/step", "/reset", "/state", "/"}
 app.routes[:] = [
     r for r in app.routes
     if not (hasattr(r, "path") and r.path in _override_paths)
@@ -146,6 +149,38 @@ async def custom_state():
     env = _get_env()
     s = env.state
     return {"episode_id": s.episode_id, "step_count": s.step_count}
+
+
+# ---------------------------------------------------------------------------
+# Serve React landing page from /static build output
+# ---------------------------------------------------------------------------
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+
+if _STATIC_DIR.is_dir():
+    # Serve the landing page at /
+    @app.get("/", response_class=HTMLResponse)
+    async def landing_page():
+        index = _STATIC_DIR / "index.html"
+        if index.exists():
+            return FileResponse(index, media_type="text/html")
+        return HTMLResponse("<h1>Enterprise Arena</h1><p><a href='/web/'>Open Playground</a></p>")
+
+    # Mount static assets (JS/CSS bundles)
+    _ASSETS_DIR = _STATIC_DIR / "assets"
+    if _ASSETS_DIR.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR)), name="static-assets")
+else:
+    # Fallback: no build output, redirect / to playground
+    @app.get("/")
+    async def landing_redirect():
+        from fastapi.responses import RedirectResponse
+        return RedirectResponse("/web/")
+
+# Convenience redirect: /playground → /web/
+@app.get("/playground")
+async def playground_redirect():
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/web/")
 
 
 def main():

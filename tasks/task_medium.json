@@ -1,7 +1,7 @@
 {
   "task_id": "medium",
   "task_name": "Deal and Complaint",
-  "description": "Close deal DEAL-001 with Acme Corp AND resolve support ticket TKT-100 (data export failure). Submit reports for both. Warning: your manager may give outdated advice and API endpoints have changed. Verify information from multiple sources before acting.",
+  "description": "Close deal DEAL-001 with Acme Corp AND resolve support ticket TKT-100 (data export failure). Submit reports for both. Warning: your manager may give outdated advice and API endpoints have changed. Verify information from multiple sources before acting. Other clients (Bolt Industries, Cedar Health) also have open issues — stay focused.",
   "max_steps": 60,
   "objectives": {
     "close_deal": {
@@ -21,12 +21,12 @@
       "weight": 0.25
     }
   },
-  "active_deals": ["DEAL-001"],
-  "active_tickets": ["TKT-100"],
+  "active_deals": ["DEAL-001", "DEAL-002"],
+  "active_tickets": ["TKT-100", "TKT-101"],
   "drift_events": [
     {
       "id": "api_v2",
-      "trigger_step": 10,
+      "trigger_step_range": [8, 14],
       "type": "api_rename",
       "old_endpoint": "/v1/deals/update",
       "new_endpoint": "/v2/deals/update",
@@ -34,7 +34,7 @@
     },
     {
       "id": "policy_threshold",
-      "trigger_step": 18,
+      "trigger_step_range": [15, 22],
       "type": "policy_change",
       "policy": "deal_approval",
       "new_text": "UPDATED POLICY (effective April 20, 2026): Deals valued over $25,000 now require VP approval AND compliance review before closing. Agents may offer discounts up to 5%. All discounts over 5% require both manager and compliance sign-off.",

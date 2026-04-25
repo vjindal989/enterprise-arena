@@ -1,7 +1,7 @@
 {
   "task_id": "hard",
   "task_name": "Full Pipeline Audit",
-  "description": "Complete the full enterprise pipeline: close deal DEAL-001, resolve ticket TKT-100, file a compliance report with a generated compliance_id, and submit an audit-ready summary. WARNING: Multiple sources are unreliable. API schemas will change mid-task. Policy thresholds will shift. Trust nothing without independent verification.",
+  "description": "Complete the full enterprise pipeline: close deal DEAL-001, resolve ticket TKT-100, file a compliance report with a generated compliance_id, and submit an audit-ready summary. WARNING: Multiple sources are unreliable. API schemas will change mid-task. Policy thresholds will shift. Trust nothing without independent verification. The CRM contains data on multiple clients and deals — stay focused on your objectives but watch for cascading consequences if you make mistakes.",
   "max_steps": 100,
   "objectives": {
     "close_deal": {
@@ -14,23 +14,23 @@
     },
     "submit_compliance_report": {
       "description": "Submit compliance report with correct compliance_id and deal data",
-      "weight": 0.25
+      "weight": 0.20
     },
     "submit_audit_summary": {
       "description": "Submit audit summary referencing all completed actions with verified data",
-      "weight": 0.20
+      "weight": 0.15
     },
     "submit_incident_report": {
       "description": "Submit incident report for TKT-100",
-      "weight": 0.15
+      "weight": 0.10
     }
   },
-  "active_deals": ["DEAL-001"],
-  "active_tickets": ["TKT-100"],
+  "active_deals": ["DEAL-001", "DEAL-002", "DEAL-003"],
+  "active_tickets": ["TKT-100", "TKT-101", "TKT-102"],
   "drift_events": [
     {
       "id": "api_v2",
-      "trigger_step": 8,
+      "trigger_step_range": [6, 12],
       "type": "api_rename",
       "old_endpoint": "/v1/deals/update",
       "new_endpoint": "/v2/deals/update",
@@ -38,7 +38,7 @@
     },
     {
       "id": "new_required_field",
-      "trigger_step": 20,
+      "trigger_step_range": [16, 25],
       "type": "required_field",
       "endpoint": "/v2/deals/update",
       "new_field": "compliance_id",
@@ -46,7 +46,7 @@
     },
     {
       "id": "policy_threshold",
-      "trigger_step": 30,
+      "trigger_step_range": [25, 35],
       "type": "policy_change",
       "policy": "deal_approval",
       "new_text": "UPDATED POLICY (effective April 20, 2026): Deals valued over $25,000 now require VP approval AND compliance review before closing. Agents may offer discounts up to 5%. All discounts over 5% require both manager and compliance sign-off.",

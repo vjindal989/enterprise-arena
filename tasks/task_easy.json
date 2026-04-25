@@ -18,7 +18,7 @@
   "drift_events": [
     {
       "id": "api_v2",
-      "trigger_step": 8,
+      "trigger_step_range": [6, 12],
       "type": "api_rename",
       "old_endpoint": "/v1/deals/update",
       "new_endpoint": "/v2/deals/update",

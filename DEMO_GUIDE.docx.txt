@@ -1,0 +1,666 @@
+================================================================================
+    ENTERPRISE ARENA — ADAPTIVE ENTERPRISE CHAOS SIMULATOR
+    Comprehensive Demo Guide, Technical Deep-Dive & Judge Q&A Prep
+    OpenEnv Hackathon — Round 2
+================================================================================
+
+Team: Vjindal26
+Live URL: https://vjindal26-enterprise-arena.hf.space
+Playground: https://vjindal26-enterprise-arena.hf.space/web/
+GitHub: https://github.com/vjindal989/enterprise-arena
+
+
+================================================================================
+PART 1: PROJECT OVERVIEW (What This Is)
+================================================================================
+
+Enterprise Arena is an OpenEnv-compliant agentic environment where an AI agent
+must navigate realistic enterprise workflows — closing deals, resolving support
+tickets, filing compliance reports — while dealing with THREE challenges that
+real enterprise AI systems face:
+
+  1. SCHEMA DRIFT — API endpoints get renamed, required fields appear, and
+     policies change DURING an episode. The agent must detect errors and adapt.
+
+  2. ADVERSARIAL/UNRELIABLE SOURCES — The manager tool gives intentionally
+     wrong advice on certain topics. Documentation can be outdated.
+     A naive agent that trusts blindly will make costly mistakes.
+
+  3. TRUST-AWARE REASONING — Each information source has a trust score.
+     After drift events, trust scores decay. The agent must learn to
+     cross-verify critical information before acting.
+
+The environment serves as a training ground and benchmark for enterprise AI
+agents, measuring not just task completion but HOW the agent handles
+uncertainty, misinformation, and change.
+
+
+================================================================================
+PART 2: PLAYGROUND DEMO SCRIPT (Step-by-Step for 2-min Video)
+================================================================================
+
+Go to: https://vjindal26-enterprise-arena.hf.space/web/
+
+The Playground has three input fields:
+  - Type: Always "call_tool" (leave as default)
+  - Tool Name: The name of the tool to call
+  - Arguments: A JSON string with tool parameters
+
+There are 3 buttons: Step (execute), Reset (new episode), Get state (check progress)
+
+------------------------------------------------------------------------
+VIDEO SCRIPT — "Easy Task: Close the Deal"  (~2 minutes)
+------------------------------------------------------------------------
+
+[0:00 - 0:10] INTRO (voiceover)
+"This is Enterprise Arena — an OpenEnv environment where AI agents navigate
+enterprise workflows with schema drift and unreliable sources. Let me walk
+through the easy task: closing a deal."
+
+[0:10 - 0:20] STEP 0: RESET
+  Action: Click "Reset" button
+  Expected: You see the task brief —
+    "Close the Deal" task loaded, objectives: close DEAL-001 and submit report.
+  What to say: "First, I reset to start a new episode. The environment loads
+    the 'easy' task — close a $75,000 deal with Acme Corp."
+
+[0:20 - 0:35] STEP 1: READ THE TASK BRIEF
+  Tool Name:  read_task_brief
+  Arguments:  {}
+  Click: Step
+  Expected: Returns task objectives, available tools, tip about verifying sources
+  What to say: "The agent starts by reading the task brief to understand
+    objectives and available tools."
+
+[0:35 - 0:50] STEP 2: QUERY CRM FOR DEAL INFO
+  Tool Name:  query_crm
+  Arguments:  {"record_type": "deals", "record_id": "DEAL-001"}
+  Click: Step
+  Expected: Returns deal details — Acme Corp, $75k, negotiation stage, Enterprise Suite
+  What to say: "Next, query the CRM — this is always accurate. We see the deal
+    is at negotiation stage, valued at $75,000."
+
+[0:50 - 1:05] STEP 3: CHECK DEAL APPROVAL POLICY
+  Tool Name:  check_policy
+  Arguments:  {"topic": "deal_approval"}
+  Click: Step
+  Expected: Returns policy about VP approval for deals > $50k
+  What to say: "We check the deal approval policy. Deals over $50k need
+    VP approval. This is a reliable source."
+
+[1:05 - 1:25] STEP 4: CLOSE THE DEAL VIA API
+  Tool Name:  call_api
+  Arguments:  {"endpoint": "/v1/deals/update", "method": "POST", "data": "{\"deal_id\": \"DEAL-001\", \"stage\": \"closed-won\", \"notes\": \"Deal approved and closed\"}"}
+  Click: Step
+  Expected: Returns success — deal updated to closed-won
+  What to say: "Now we call the API to close the deal. This works because
+    we're still before step 8. After step 8, this endpoint gets deprecated
+    and the agent would need to discover /v2/deals/update. That's schema drift."
+
+  [OPTIONAL — to demo drift, do 4-5 more dummy steps first by calling
+   get_status repeatedly, THEN try /v1/deals/update to see the 404 error]
+
+[1:25 - 1:40] STEP 5: SUBMIT THE REPORT
+  Tool Name:  submit_report
+  Arguments:  {"report_type": "deal_closure", "data": "{\"deal_id\": \"DEAL-001\", \"value\": 75000, \"customer\": \"Acme Corp\", \"product\": \"Enterprise Suite\"}"}
+  Click: Step
+  Expected: Report submitted successfully, confirmation ID returned
+  What to say: "Finally, submit the deal closure report. Both objectives
+    are now complete."
+
+[1:40 - 1:55] STEP 6: CHECK STATUS
+  Tool Name:  get_status
+  Arguments:  {}
+  Click: Step
+  Expected: Shows both objectives completed, reward ~0.80-0.90, done=true
+  What to say: "The status shows both objectives complete. The reward
+    reflects task completion, source accuracy, drift adaptation, and efficiency.
+    A naive agent scores about 0.63 across all tasks. A smart agent that
+    verifies sources and adapts to drift scores 0.87 — a 24% improvement."
+
+[1:55 - 2:00] CLOSING
+"Enterprise Arena tests what matters for real enterprise AI — not just getting
+the right answer, but handling change, misinformation, and uncertainty."
+
+
+------------------------------------------------------------------------
+ALL 9 TOOLS — Quick Reference for Demo
+------------------------------------------------------------------------
+
+TOOL NAME          | ARGUMENTS                                      | PURPOSE
+-------------------|-------------------------------------------------|--------
+read_task_brief    | {}                                              | Get task objectives and context
+query_crm          | {"record_type":"deals","record_id":"DEAL-001"}  | Query CRM (always accurate)
+                   | {"record_type":"tickets","record_id":"TKT-100"} | Query ticket details
+                   | {"record_type":"clients","record_id":"acme-corp"}| Query client info
+                   | {"record_type":"deals"}                         | List all deals (no record_id)
+check_policy       | {"topic":"deal_approval"}                       | Check company policy
+                   | {"topic":"complaint_handling"}                   | Ticket handling policy
+                   | {"topic":"compliance"}                          | Compliance requirements
+ask_manager        | {"question":"How should I close DEAL-001?"}     | Ask manager (MAY BE WRONG)
+read_docs          | {"topic":"api_usage"}                           | Read API docs (MAY BE OUTDATED)
+                   | {"topic":"crm_guide"}                           | CRM guide
+                   | {"topic":"compliance_guide"}                    | Compliance guide
+call_api           | (see examples below)                            | Call enterprise API endpoints
+submit_report      | {"report_type":"deal_closure","data":"{}"}      | Submit business report
+resolve_ticket     | {"ticket_id":"TKT-100","resolution":"...","resolution_type":"technical_fix"} | Resolve ticket
+get_status         | {}                                              | Check current progress
+
+
+CALL_API EXAMPLES:
+
+  Close a deal (v1, before drift):
+    {"endpoint":"/v1/deals/update","method":"POST","data":"{\"deal_id\":\"DEAL-001\",\"stage\":\"closed-won\",\"notes\":\"Approved and closed\"}"}
+
+  Close a deal (v2, after drift):
+    {"endpoint":"/v2/deals/update","method":"POST","data":"{\"deal_id\":\"DEAL-001\",\"stage\":\"closed-won\",\"notes\":\"Approved and closed\"}"}
+
+  Generate compliance ID (v2):
+    {"endpoint":"/v2/compliance/generate","method":"POST","data":"{\"deal_id\":\"DEAL-001\"}"}
+
+  Resolve ticket via API:
+    {"endpoint":"/v1/tickets/resolve","method":"POST","data":"{\"ticket_id\":\"TKT-100\",\"resolution\":\"Updated export config to v2 endpoint\",\"resolution_type\":\"technical_fix\"}"}
+
+
+------------------------------------------------------------------------
+DEMONSTRATING SCHEMA DRIFT (impressive for judges)
+------------------------------------------------------------------------
+
+To show drift in the demo, do the "easy" task but intentionally delay
+the API call:
+
+1. Reset
+2. read_task_brief                             (step 1)
+3. query_crm {"record_type":"deals"}           (step 2)
+4. check_policy {"topic":"deal_approval"}      (step 3)
+5. get_status {}                               (steps 4-8, repeat 5 times)
+6. NOW try: call_api with /v1/deals/update     (step 9 — after drift at step 8)
+   => Returns 404: "Endpoint deprecated. The Deals API has been migrated to v2"
+7. read_docs {"topic":"api_usage"}             (step 10 — check docs for new endpoint)
+8. call_api with /v2/deals/update              (step 11 — succeeds!)
+
+Say: "See? The API changed mid-episode. The agent got a 404, read the docs to
+discover the new endpoint, and recovered. This is schema drift — and our
+grading measures how fast the agent adapts."
+
+
+================================================================================
+PART 3: DETAILED TECHNICAL EXPLANATION (How We Built It)
+================================================================================
+
+------------------------------------------------------------------------
+3.1 ARCHITECTURE OVERVIEW
+------------------------------------------------------------------------
+
+The project has 4 main layers:
+
+  enterprise-arena/
+  ├── server/
+  │   ├── enterprise_arena.py    ← Core environment (MCPEnvironment + 9 tools)
+  │   ├── graders.py             ← 4-component deterministic scoring system
+  │   ├── app.py                 ← FastAPI server + Gradio Playground
+  │   └── __init__.py
+  ├── tasks/
+  │   ├── task_easy.json         ← "Close the Deal" (1 drift, no adversarial)
+  │   ├── task_medium.json       ← "Deal + Complaint" (2 drifts, wrong manager)
+  │   └── task_hard.json         ← "Full Pipeline Audit" (3 drifts, all adversarial)
+  ├── scripts/
+  │   └── scripted_baseline.py   ← Naive vs Smart baseline strategies
+  ├── train_colab.py             ← Unsloth + LoRA training script
+  ├── inference.py               ← Agent inference loop
+  ├── client.py                  ← OpenEnv HTTP client
+  ├── Dockerfile                 ← Multi-stage Docker for HF Spaces
+  └── openenv.yaml               ← OpenEnv spec configuration
+
+
+------------------------------------------------------------------------
+3.2 CORE ENVIRONMENT — enterprise_arena.py
+------------------------------------------------------------------------
+
+The EnterpriseArena class extends MCPEnvironment from the OpenEnv framework.
+MCPEnvironment lets us register tools via the MCP (Model Context Protocol)
+standard — any MCP-compatible agent can connect directly.
+
+KEY DESIGN DECISIONS:
+
+  a) FASTMCP FOR TOOL REGISTRATION
+     We create a FastMCP("enterprise_arena") instance and register all 9 tools
+     as @mcp.tool decorated functions. Each tool function is a closure that
+     captures `self` (the environment instance), so tools can read and modify
+     the world state.
+
+     Why FastMCP? It handles all MCP protocol details — tool discovery,
+     argument validation, result formatting — automatically. When an agent
+     sends CallToolAction(tool_name="query_crm", arguments={...}), FastMCP
+     routes it to the right function and validates the arguments against
+     the function signature.
+
+  b) STATIC WORLD DATA
+     The file defines several constant data structures that simulate a real
+     enterprise system:
+
+     - CRM_DATA: A dictionary acting as a CRM database with 3 record types:
+       * deals: DEAL-001 — Acme Corp, $75k, Enterprise Suite, negotiation stage
+       * clients: acme-corp — Gold tier, manufacturing, $50M revenue
+       * tickets: TKT-100 — Data export failing after API migration, high priority
+
+     - POLICIES: Company policies with v1 (original) and v2 (post-drift) versions
+       * deal_approval: VP approval rules and discount thresholds
+       * complaint_handling: SLA rules, resolution types
+       * compliance: Report requirements for closed deals
+
+     - MANAGER_RESPONSES: Pre-written correct and wrong responses per topic
+       * deal_approval: correct says "need VP + compliance_id" vs wrong says "close directly"
+       * api_usage: correct says "use v2" vs wrong says "v1 works fine"
+       * ticket_resolution: correct says "technical_fix" vs wrong says "refund"
+       Each topic has a "correct" and "wrong" variant. The task config
+       determines which topics get the wrong answer.
+
+     - DOCS: Documentation with "current" and "outdated" versions
+       * api_usage: current shows v2 endpoints; outdated shows only v1
+       * compliance_guide: current shows compliance_id requirement; outdated omits it
+
+     - API_ENDPOINTS_V1 / API_ENDPOINTS_V2_ADDITIONS: Schema definitions
+       for each API endpoint — method, required fields, optional fields.
+       V1 is active at start. V2 endpoints are added after drift.
+
+  c) WORLD STATE (mutable during episode)
+     The __init__ method sets up all mutable tracking state:
+
+     - _active_endpoints: Currently active API endpoints (starts as V1)
+     - _deprecated_endpoints: Endpoints that have been deprecated by drift
+     - _current_policy_version: Which version of each policy is active
+     - _deal_stages: Tracks deal stage changes (e.g., DEAL-001 → "closed-won")
+     - _ticket_statuses: Tracks ticket resolution status
+     - _ticket_resolutions: Stores resolution details + type
+     - _reports_submitted: Which reports have been filed
+     - _compliance_ids: Generated compliance IDs per deal
+     - _manager_queries: Log of all manager interactions (for grading)
+     - _api_calls: Log of all API calls (for grading)
+     - _trust_scores: Per-source reliability scores (CRM: 1.0, manager: 0.7, etc.)
+     - _applied_drifts: Set of drift event IDs that have been triggered
+     - _drift_recovery: How many steps after drift the agent took to adapt
+     - _actions_log: Full log of every tool call for grading
+
+  d) THE 9 TOOLS (what each does)
+
+     1. read_task_brief() → Returns task objectives, available tools, and tips.
+        This is always the first thing a smart agent should call.
+
+     2. query_crm(record_type, record_id) → Queries the CRM database.
+        THE CRM IS ALWAYS ACCURATE. This is the ground truth source.
+        Supports: "deals", "clients", "tickets". Can list all or get by ID.
+
+     3. check_policy(topic) → Returns current company policy.
+        Policies may change mid-episode (drift). Always authoritative at time
+        of query. Available topics: deal_approval, complaint_handling, compliance.
+
+     4. ask_manager(question) → Gets manager guidance. THE MANAGER MAY LIE.
+        On medium/hard tasks, the manager gives wrong advice on specific topics.
+        Example: Manager says "use resolution_type: refund" when the correct
+        answer is "technical_fix". The task config controls which topics are wrong
+        via the "manager_wrong_topics" field.
+        The response includes a "caveat" field hinting the manager might be wrong.
+
+     5. read_docs(topic) → Reads system documentation. DOCS MAY BE OUTDATED.
+        On medium/hard tasks, certain doc topics show old information.
+        Example: api_usage docs may show only v1 endpoints even though v2 exists.
+        The task config controls which topics are outdated via "docs_outdated_topics".
+
+     6. call_api(endpoint, method, data) → Calls enterprise API endpoints.
+        This is where drift is most visible:
+        - Before drift: /v1/deals/update works fine
+        - After drift: /v1/deals/update returns 404 with a helpful error message
+        - Agent must discover and use /v2/deals/update
+        The "data" parameter is a JSON string (e.g., '{"deal_id":"DEAL-001","stage":"closed-won"}')
+        Validates required fields, method, and endpoint existence.
+
+     7. submit_report(report_type, data) → Files a business report.
+        Valid types: deal_closure, incident, compliance, audit_summary.
+        Returns a confirmation ID. Reports are tracked for grading.
+
+     8. resolve_ticket(ticket_id, resolution, resolution_type) → Resolves a ticket.
+        Valid types: technical_fix, workaround, escalation, refund.
+        Grading checks if the correct resolution_type was used — agents that
+        blindly follow wrong manager advice will use "refund" when "technical_fix"
+        is correct, losing 30% on source_accuracy score.
+
+     9. get_status() → Returns current progress. Shows which objectives are
+        complete, step count, trust scores, and done status.
+
+  e) DRIFT ENGINE — _apply_pending_drifts() and _apply_drift()
+
+     Each task has a "drift_events" list. Each drift event has:
+       - id: unique identifier (e.g., "api_v2")
+       - trigger_step: The step number when drift fires
+       - type: "api_rename", "required_field", or "policy_change"
+
+     On EVERY step, _apply_pending_drifts() checks if any drift events should
+     fire (step_count >= trigger_step). When they fire:
+
+       api_rename: Deprecates old endpoint, activates new one.
+         /v1/deals/update → deprecated, /v2/deals/update → active
+
+       required_field: Adds a new required field to an existing endpoint.
+         /v2/deals/update now requires "compliance_id" — calls without it fail 422
+
+       policy_change: Swaps the policy version from v1 to v2.
+         deal_approval threshold drops from $50k to $25k
+
+     After any drift, trust scores for docs and manager drop by 0.1 each,
+     reflecting the increased unreliability.
+
+  f) STEP FLOW — step() method
+
+     When the agent takes an action:
+
+     1. Increment step counter
+     2. Apply any pending drift events (if step >= trigger_step)
+     3. Check if max steps exceeded → done=True
+     4. Call super().step(action) → MCP protocol → FastMCP dispatches to tool fn
+     5. Check if all objectives are complete
+     6. Compute reward using the 4-component grader
+     7. Set obs.reward and obs.done
+     8. If done: compute final score breakdown and attach to metadata
+     9. Return observation
+
+  g) RESET FLOW — reset() method
+
+     1. Generates new episode_id
+     2. Resets step counter and done flag
+     3. Loads the task JSON file (easy/medium/hard)
+     4. Initializes all world state (endpoints, policies, tracking dicts)
+     5. Returns CallToolObservation with task info (visible in Playground)
+
+
+------------------------------------------------------------------------
+3.3 GRADING SYSTEM — graders.py
+------------------------------------------------------------------------
+
+The grading is 100% DETERMINISTIC — no LLM-as-judge, no subjectivity.
+It uses 4 weighted components:
+
+  COMPONENT              WEIGHT    WHAT IT MEASURES
+  ─────────────────────────────────────────────────────────────
+  Task Completion         40%      Did the agent complete each objective?
+  Source Accuracy          30%      Did the agent handle unreliable sources correctly?
+  Drift Adaptation        20%      How quickly did the agent recover from drift?
+  Efficiency              10%      Steps used vs. optimal step count
+
+  a) TASK COMPLETION (40%)
+     Each objective has a weight. For example, easy task:
+       close_deal (weight 0.6): Was DEAL-001 updated to "closed-won"?
+       submit_report (weight 0.4): Was a "deal_closure" report submitted?
+
+     The grader checks actual world state — deal_stages["DEAL-001"],
+     reports_submitted["deal_closure"], etc. No parsing, no heuristics.
+
+     For hard tasks, additional checks:
+       - Did the deal closure include a compliance_id?
+       - Was the correct ticket resolution_type used?
+       - Does the compliance report contain the compliance_id?
+
+  b) SOURCE ACCURACY (30%)
+     Tracks whether the agent cross-verified unreliable sources:
+
+     - If manager gave wrong advice → did the agent check another source
+       (CRM, policy, docs, or try the API) on the same topic?
+     - If docs were outdated → did the agent verify with CRM or API?
+     - If no unreliable sources were consulted → 0.7 (avoided them, partial credit)
+     - Big penalty (-0.3) if agent used wrong ticket resolution_type
+       (means they acted on bad manager advice without verifying)
+
+     This is what creates the gap between naive (0.63) and smart (0.87) agents.
+
+  c) DRIFT ADAPTATION (20%)
+     Measures recovery speed after each drift event:
+
+     - Perfect (1 step to recover): Score = 1.0
+     - 10+ steps to recover: Score = 0.0
+     - Linear interpolation in between
+     - If agent used v2 but exact recovery can't be pinpointed: 0.5
+     - If agent never recovered (used only v1): 0.0
+
+     Recovery is detected when the agent successfully calls a v2 endpoint
+     after a v1 endpoint was deprecated. The _drift_recovery dict records
+     how many steps elapsed between drift activation and successful v2 call.
+
+  d) EFFICIENCY (10%)
+     Each task has an "optimal" step count:
+       Easy: 8 steps optimal (max 40)
+       Medium: 15 steps optimal (max 60)
+       Hard: 25 steps optimal (max 100)
+
+     Score = 1.0 if steps <= optimal, linear decay to 0.1 at max_steps.
+
+
+------------------------------------------------------------------------
+3.4 SERVER — app.py
+------------------------------------------------------------------------
+
+  app.py creates the FastAPI application using the OpenEnv framework's
+  create_app() function. Two key things:
+
+  a) _WebCallToolAction SUBCLASS
+     The Gradio Playground sends form values as strings. The "arguments" field
+     arrives as the string '{}' instead of the dictionary {}. The standard
+     CallToolAction fails with a Pydantic validation error. Our fix:
+     A thin subclass with a @field_validator that parses JSON strings into dicts.
+
+  b) SINGLETON PATTERN
+     The framework creates a NEW environment instance per HTTP request for
+     /step, /reset, /state routes. That breaks multi-step episodes because
+     state resets each time. Our fix: remove the framework's routes and add
+     custom routes that use a single shared environment instance (_env).
+     The Playground (/web/*) routes work separately via WebInterfaceManager
+     which creates its own instance.
+
+  c) ROUTE STRUCTURE
+     Custom HTTP routes (singleton):  /step, /reset, /state
+     Playground routes (WebInterfaceManager): /web/step, /web/reset, /web/state
+     Framework routes: /health, /metadata, /schema, /mcp, /ws
+
+
+------------------------------------------------------------------------
+3.5 TASK CONFIGURATIONS — tasks/
+------------------------------------------------------------------------
+
+  EASY — "Close the Deal"
+    Objectives: Close DEAL-001, submit deal report
+    Drift events: 1 (API v1→v2 at step 8)
+    Adversarial: None (no wrong manager, no outdated docs)
+    Max steps: 40
+
+  MEDIUM — "Deal and Complaint"
+    Objectives: Close DEAL-001, resolve TKT-100, submit deal report, submit incident report
+    Drift events: 2 (API v1→v2 at step 10, policy threshold change at step 18)
+    Adversarial: Manager lies about ticket_resolution AND api_usage;
+                 Docs outdated on api_usage
+    Max steps: 60
+    Trap: Manager says "use refund" for TKT-100 — correct answer is "technical_fix"
+
+  HARD — "Full Pipeline Audit"
+    Objectives: Close DEAL-001 with compliance_id, resolve TKT-100,
+                submit compliance report, submit audit summary, submit incident report
+    Drift events: 3 (API v1→v2 at step 8, compliance_id required at step 20,
+                     policy threshold change at step 30)
+    Adversarial: Manager lies about ticket_resolution, api_usage, AND deal_approval;
+                 Docs outdated on api_usage AND compliance_guide
+    Max steps: 100
+    Traps: Manager says "no compliance needed" (wrong), docs show old compliance rules,
+           manager says "use /v1" (deprecated), manager says "use refund" (wrong type)
+
+
+------------------------------------------------------------------------
+3.6 BASELINE RESULTS — What We Measured
+------------------------------------------------------------------------
+
+  We ran two scripted strategies (no LLM) across all 3 difficulty levels:
+
+  NAIVE STRATEGY (trusts everything, uses v1 always):
+    1. read_task_brief
+    2. query_crm
+    3. ask_manager → follows advice blindly
+    4. call_api /v1/deals/update → may fail if drift happened
+    5. submit_report
+    6. resolve_ticket with manager's suggested type (may be wrong)
+
+  SMART STRATEGY (cross-verifies, uses v2, checks multiple sources):
+    1. read_task_brief
+    2. query_crm
+    3. check_policy → gets authoritative rules
+    4. read_docs → discovers v2 endpoints
+    5. ask_manager → gets advice (may be wrong)
+    6. Compares manager vs policy vs docs → uses verified info
+    7. call_api /v2/deals/update → correct endpoint
+    8. resolve_ticket with correct type from CRM/policy (not manager)
+    9. submit all required reports
+
+  RESULTS:
+  ┌─────────┬────────┬────────┬────────┬─────────┐
+  │ Task    │ Naive  │ Smart  │ Delta  │ Key Reason                │
+  ├─────────┼────────┼────────┼────────┼───────────────────────────┤
+  │ Easy    │  0.80  │  0.90  │ +0.10  │ Smart uses v2 (drift adapt)│
+  │ Medium  │  0.59  │  0.90  │ +0.31  │ Wrong ticket type + no v2  │
+  │ Hard    │  0.51  │  0.82  │ +0.31  │ All traps hit naive agent  │
+  ├─────────┼────────┼────────┼────────┼───────────────────────────┤
+  │ Average │  0.63  │  0.87  │ +0.24  │ 24% improvement            │
+  └─────────┴────────┴────────┴────────┴───────────────────────────┘
+
+  The 24% improvement gap is the TRAINING SIGNAL for RL/fine-tuning.
+
+
+------------------------------------------------------------------------
+3.7 TRAINING — train_colab.py
+------------------------------------------------------------------------
+
+  We provide a Google Colab-ready training script using:
+    - Unsloth (4-bit quantization for fast training)
+    - TRL's SFTTrainer (supervised fine-tuning on expert trajectories)
+    - LoRA adapters (train only 1-2% of parameters)
+
+  The script includes 4 embedded expert trajectories showing the correct
+  tool sequences for each difficulty level. It also supports loading
+  additional trajectories from trajectories.jsonl (generated by the
+  scripted baseline).
+
+
+================================================================================
+PART 4: JUDGE Q&A PREPARATION
+================================================================================
+
+Q1: "What is Enterprise Arena?"
+A: "It's an OpenEnv agentic environment that simulates realistic enterprise
+workflows. An AI agent must close deals, resolve tickets, and file reports —
+but the system changes mid-episode. API endpoints get deprecated, company
+policies update, and some sources give wrong information. We grade how well
+the agent handles these real-world challenges."
+
+Q2: "How is this different from a static benchmark?"
+A: "Static benchmarks test memorization — the correct answer is always the
+same. Our environment CHANGES during an episode. The API that works at step 7
+returns a 404 at step 9. The policy threshold shifts from $50k to $25k at
+step 30. An agent must detect these changes and adapt in real-time. We measure
+adaptation speed in our drift_adaptation score."
+
+Q3: "How does the grading work?"
+A: "We have 4 deterministic scoring components — no LLM-as-judge:
+  - Task Completion (40%): Did the agent close the deal, resolve the ticket?
+  - Source Accuracy (30%): Did it cross-verify unreliable sources before acting?
+  - Drift Adaptation (20%): How fast did it recover when the API changed?
+  - Efficiency (10%): How many steps did it use?
+Each component uses objective facts — was the deal stage updated, was the
+correct resolution type used, how many steps between the 404 and the successful
+v2 call."
+
+Q4: "What makes the medium/hard tasks harder?"
+A: "Three things compound:
+  Easy: 1 drift event, no adversarial sources, 2 objectives.
+  Medium: 2 drift events + manager gives wrong ticket resolution advice +
+    docs are outdated. 4 objectives. The trap is: manager says 'use refund'
+    but the correct answer is 'technical_fix'. Agents that trust blindly lose
+    30% on source accuracy.
+  Hard: 3 drift events + ALL sources can lie (manager wrong on 3 topics,
+    docs outdated on 2 topics). 5 objectives including compliance with
+    generated IDs. A compliance_id field becomes required mid-episode."
+
+Q5: "What's the training signal?"
+A: "The per-step reward. A naive agent that trusts everything and uses
+deprecated APIs scores 0.63 on average. A smart agent that verifies sources
+and adapts to drift scores 0.87. That 24% gap is the training signal.
+We provide expert trajectories and a Colab-ready fine-tuning script using
+Unsloth + LoRA."
+
+Q6: "Why MCP / FastMCP?"
+A: "MCP is the Model Context Protocol — the emerging standard for AI agent
+tool use. Any MCP-compatible agent (Claude, GPT with tool use, custom agents)
+can connect to our environment directly. FastMCP handles tool discovery,
+argument validation via Pydantic, and result formatting. It also gives us
+the Gradio Playground for free through the OpenEnv framework."
+
+Q7: "How did you handle the Playground UI?"
+A: "The OpenEnv framework's Gradio Playground sends form values as strings,
+but CallToolAction expects a dictionary for 'arguments'. We created a thin
+subclass with a Pydantic field_validator that JSON-parses string arguments.
+We also changed the reset observation to use CallToolObservation instead of
+base Observation so the Playground can display task info on reset."
+
+Q8: "What does schema drift mean technically?"
+A: "Each task defines drift_events with a trigger_step. On every step(),
+the environment checks if any drift events should fire. When triggered:
+  - api_rename: Old endpoint goes into _deprecated_endpoints (returns 404),
+    new endpoint is added to _active_endpoints.
+  - required_field: New required field is added to an existing endpoint's
+    validation. Calls without it get 422 with a helpful error message.
+  - policy_change: Policy version flips from v1 to v2, changing rules.
+Trust scores for docs and manager drop after each drift, signaling
+increased unreliability."
+
+Q9: "Is the grading fair?"
+A: "Completely deterministic and transparent. No randomness, no LLM judging.
+The grader examines concrete world state: what endpoints were called, what
+resolution type was used, how many steps between drift and recovery. Every
+component is auditable — the breakdown shows exactly where points were
+gained or lost."
+
+Q10: "How would a real LLM agent connect?"
+A: "Three ways:
+  1. HTTP API: POST /step with CallToolAction JSON, POST /reset, GET /state
+  2. MCP WebSocket: Connect to /mcp or /ws for MCP protocol
+  3. Python client: from client import EnvClient; env = EnvClient(base_url)
+The inference.py script shows a complete agent loop: reset → read task →
+call tools → observe results → decide next action → repeat until done."
+
+Q11: "What would you improve with more time?"
+A: "Three things:
+  1. More drift types: personnel changes, system outages, concurrent requests
+  2. Multi-agent scenarios: two agents competing for the same deal
+  3. Longer horizons with cascading consequences: a mistake in step 5
+     causes a chain reaction at step 20"
+
+
+================================================================================
+PART 5: KEY TALKING POINTS FOR VIDEO
+================================================================================
+
+1. HOOK: "What happens when the rules change mid-game?"
+
+2. PROBLEM: "Real enterprise AI agents face changing APIs, unreliable
+   information, and conflicting sources. Existing benchmarks don't test this."
+
+3. SOLUTION: "Enterprise Arena — an OpenEnv environment with schema drift,
+   adversarial sources, and trust-aware reasoning."
+
+4. DEMO: Show Reset → read_task_brief → query_crm → call_api (success or 404)
+   → adapt to v2 → submit_report → get_status showing completion.
+
+5. RESULTS: "Naive agents score 0.63. Smart agents that verify and adapt
+   score 0.87. That 24% gap is our training signal."
+
+6. SCORING: "4 deterministic components: task completion, source accuracy,
+   drift adaptation, efficiency. No LLM judging — fully auditable."
+
+
+================================================================================
+END OF DOCUMENT
+================================================================================

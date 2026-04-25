@@ -5,9 +5,10 @@ Each grader receives a grading_data dict and returns:
   {"score": float 0.0–1.0, "breakdown": {...}}
 
 Scoring:
-  Task Completion  40% — Did the agent complete each objective?
-  Source Accuracy   30% — Did the agent verify unreliable sources before acting?
+  Task Completion  35% — Did the agent complete each objective?
+  Source Accuracy   25% — Did the agent verify unreliable sources before acting?
   Drift Adaptation  20% — How quickly did the agent recover after schema drift?
+  Cascade Recovery  10% — Did the agent handle cascading consequences from mistakes?
   Efficiency        10% — Steps used vs max steps
 """
 
@@ -207,34 +208,91 @@ def _efficiency_score(data: Dict) -> Dict:
     }
 
 
+def _cascade_recovery_score(data: Dict) -> Dict:
+    """Score based on how the agent handled cascading consequences from mistakes.
+
+    If no cascades were triggered, the agent avoided mistakes entirely → full marks.
+    If cascades were triggered, score based on whether the agent resolved them.
+    """
+    active_cascades = data.get("active_cascades", [])
+    task = data["task"]
+    objectives = task.get("objectives", {})
+
+    if not active_cascades:
+        return {"score": 1.0, "breakdown": {"no_cascades_triggered": True, "mistakes_avoided": True}}
+
+    # For each cascade, check if the injected objective was completed
+    cascade_results = {}
+    total = len(active_cascades)
+    resolved = 0
+
+    for cascade_key in active_cascades:
+        if cascade_key == "wrong_ticket_resolution":
+            # Check if TKT-200 (escalation) was resolved with technical_fix
+            tkt200 = data["ticket_resolutions"].get("TKT-200", {})
+            was_resolved = tkt200.get("resolution_type") == "technical_fix"
+            cascade_results[cascade_key] = {"resolved": was_resolved}
+            if was_resolved:
+                resolved += 1
+        elif cascade_key == "deal_without_compliance":
+            # Check if corrective compliance report was submitted
+            was_resolved = "compliance" in data["reports_submitted"]
+            cascade_results[cascade_key] = {"resolved": was_resolved}
+            if was_resolved:
+                resolved += 1
+        elif cascade_key == "api_cooldown":
+            # Rate-limit is just a penalty, not recoverable
+            cascade_results[cascade_key] = {"resolved": False, "note": "rate_limited"}
+
+    # Partial credit: 0.3 base (triggered cascades = mistakes), up to 0.7 for resolving
+    if total > 0:
+        recovery_ratio = resolved / total
+        score = 0.3 + 0.7 * recovery_ratio
+    else:
+        score = 1.0
+
+    return {
+        "score": min(1.0, max(0.0, score)),
+        "breakdown": {
+            "cascades_triggered": total,
+            "cascades_resolved": resolved,
+            "details": cascade_results,
+        },
+    }
+
+
 def grade_task(data: Dict) -> Dict:
     """
-    Grade any task using the 4-component weighted score.
+    Grade any task using the 5-component weighted score.
 
     Weights:
-      Task Completion  40%
-      Source Accuracy   30%
-      Drift Adaptation  20%
-      Efficiency        10%
+      Task Completion    35%
+      Source Accuracy     25%
+      Drift Adaptation   20%
+      Cascade Recovery   10%
+      Efficiency         10%
     """
     tc = _task_completion_score(data)
     sa = _source_accuracy_score(data)
     da = _drift_adaptation_score(data)
+    cr = _cascade_recovery_score(data)
     ef = _efficiency_score(data)
 
     score = (
-        tc["score"] * 0.40
-        + sa["score"] * 0.30
+        tc["score"] * 0.35
+        + sa["score"] * 0.25
         + da["score"] * 0.20
+        + cr["score"] * 0.10
         + ef["score"] * 0.10
     )
 
     return {
         "score": min(1.0, max(0.0, round(score, 4))),
         "breakdown": {
-            "task_completion": {"score": tc["score"], "weight": 0.40, "details": tc["breakdown"]},
-            "source_accuracy": {"score": sa["score"], "weight": 0.30, "details": sa["breakdown"]},
+            "task_completion": {"score": tc["score"], "weight": 0.35, "details": tc["breakdown"]},
+            "source_accuracy": {"score": sa["score"], "weight": 0.25, "details": sa["breakdown"]},
             "drift_adaptation": {"score": da["score"], "weight": 0.20, "details": da["breakdown"]},
+            "cascade_recovery": {"score": cr["score"], "weight": 0.10, "details": cr["breakdown"]},
             "efficiency": {"score": ef["score"], "weight": 0.10, "details": ef["breakdown"]},
         },
     }

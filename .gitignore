@@ -5,3 +5,4 @@ __pycache__/
 ea-agent-lora/
 *.sqlite3
 .env
+node_modules/

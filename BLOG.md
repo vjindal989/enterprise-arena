@@ -1,126 +1,263 @@
-# Adaptive Enterprise Arena: Teaching AI Agents to Navigate Chaos
+# Enterprise Arena: When the World Fights Back
 
-**TL;DR:** We built an OpenEnv environment where AI agents must complete enterprise workflows while dealing with schema drift, adversarial NPCs, and cascading consequences. A naive agent scores 0.63 — after training on expert trajectories, it reaches 0.87 (+24% improvement).
+**TL;DR:** We built an OpenEnv environment where enterprise AI agents must navigate stochastic schema drift, adversarial coworkers, functional trust degradation, and cascading consequences — all while completing real business workflows. A naive agent scores 0.63. After LoRA fine-tuning on expert trajectories, it reaches 0.87 (+38% relative improvement). The environment is fully deterministic, has 40 unit tests, 5-axis grading, and three difficulty tiers.
 
 ---
 
-## The Problem: Enterprise AI Is Fragile
+## Why This Matters
 
-Most LLM benchmarks test agents in static worlds. But real enterprise environments are messy:
+Every AI agent benchmark makes the same mistake: the world holds still.
 
-- **APIs change** — The endpoint you called yesterday returns 404 today
-- **People give outdated advice** — Your manager hasn't read the migration docs
-- **Documentation lags behind** — The wiki still shows v1 examples
-- **Mistakes cascade** — A wrong API call → bad data → failed compliance report → audit failure
+Real enterprise work isn't like that. The API you called on Monday returns `404` on Tuesday because someone merged a migration. Your manager tells you to "just process a refund" because they haven't read the new complaint-handling policy. The documentation wiki still shows v1 examples two months after the v2 rollout. And when you make a mistake — closing a deal without a compliance ID — you don't just lose points. Three steps later, a regulatory audit lands in your inbox.
 
-We wanted to build an environment that captures this chaos and measures whether agents can **adapt**.
+We wanted to build an environment that captures this specific flavor of enterprise chaos and measures whether agents can **adapt, verify, and recover** — not just follow instructions.
 
-## The Environment: Enterprise Arena
+## The Design Philosophy
 
-The agent plays an enterprise employee at "Nexus Corp" who must complete multi-step business workflows:
+Enterprise Arena is built around a single observation: **in the real world, information has variable reliability, and that reliability changes over time.**
 
-| Task | What the Agent Does | What Goes Wrong |
-|------|-------------------|-----------------|
-| **Easy** | Close a deal + submit report | API migrates v1→v2 mid-task |
-| **Medium** | Close deal + resolve support ticket | API drifts + manager gives wrong advice on ticket resolution |
-| **Hard** | Full pipeline with compliance audit | 3 schema drifts + adversarial manager + outdated documentation |
+This led to four interlocking mechanics:
 
-### 9 Tools, 5 Information Sources
+### 1. Stochastic Drift
 
-The agent has 9 MCP tools to interact with the enterprise:
+API schemas, required fields, and policy thresholds shift at **unpredictable** moments within randomized windows. Each episode seeds its own random generator, so the exact step where drift fires varies — but the drift *will* happen.
 
-- `query_crm` — Always accurate (ground truth)
-- `check_policy` — Authoritative, but policies can change mid-episode
-- `read_docs` — May be outdated without warning
-- `ask_manager` — May give confidently wrong advice
-- `call_api` — Endpoints can deprecate, schemas can change
+```
+Step 8:  call_api("/v1/deals/update", ...) → 200 OK
+Step 9:  [DRIFT] API v1→v2 migration fires
+Step 10: call_api("/v1/deals/update", ...) → 404 "Endpoint deprecated"
+Step 11: read_docs("api_usage") → "POST /v2/deals/update — Required: deal_id, stage, notes"
+Step 12: call_api("/v2/deals/update", ...) → 200 OK ✓
+```
 
-The core skill the agent must learn: **not all sources are equally trustworthy, and the right source changes over time.**
+A naive agent retries v1 three times. A smart agent reads the error, checks docs, and adapts in one step.
 
-### Schema Drift
+### 2. Adversarial Information Sources
 
-At predefined step thresholds, drift events fire:
-1. **API Rename**: `/v1/deals/update` → deprecated, `/v2/deals/update` activated
-2. **Required Field**: `/v2/deals/update` now requires `compliance_id`
-3. **Policy Change**: Deal approval threshold drops from $50k to $25k
+Not all tools tell the truth. The environment configures per-task which sources are unreliable:
 
-A naive agent that memorized the API schema will hit 404s. A smart agent reads the error message, checks docs, and adapts.
+| Source | Reliability | What Can Go Wrong |
+|--------|------------|-------------------|
+| `query_crm` | Always accurate | Ground truth |
+| `check_policy` | Authoritative, can drift | Approval thresholds change mid-episode |
+| `read_docs` | May be outdated | Shows v1 endpoints after v2 migration |
+| `ask_manager` | May be confidently wrong | Recommends "refund" when policy requires "technical_fix" |
+| `call_api` | Endpoints can break | Returns 404, 422, or 429 |
 
-### Adversarial Actors
+The core skill: **triangulate before acting.** The agent must learn which sources to trust, and when that trust should erode.
 
-The manager responds based on keyword matching to your question. On certain topics (configured per task), the manager gives plausible but wrong advice:
+### 3. Functional Trust Scores
 
-> **You:** "How should I resolve TKT-100?"
-> **Manager (wrong):** "Just process a refund. Data export issues are usually client-side."
-> **Policy (correct):** "For data-related issues, verify the root cause before applying fixes."
+Unlike most environments where trust is just a metric, our trust scores **change tool behavior**:
 
-A naive agent follows the manager. A smart agent cross-checks against policy and CRM data.
+- **Manager trust < 35%** → `ask_manager` returns "Manager is currently unavailable"
+- **Documentation trust < 50%** → `read_docs` includes a reliability warning
+- Trust degrades every time a source gives wrong or outdated information
+- Trust degradation stacks — multiple bad answers from the same source accelerate the decline
 
-## The Scoring: 4-Component Reward
+This creates a natural curriculum: early in the episode, all sources seem fine. As drift fires and mistakes accumulate, the agent must *notice* that its information sources are degrading and switch to more reliable ones.
 
-| Component | Weight | What It Measures |
-|-----------|--------|------------------|
-| Task Completion | 40% | Did you finish all objectives correctly? |
-| Source Accuracy | 30% | Did you verify unreliable sources before acting? |
-| Drift Adaptation | 20% | How quickly did you recover after schema changes? |
-| Efficiency | 10% | Steps used vs optimal |
+### 4. Cascading Consequences
 
-This reward structure means an agent can't just brute-force completion — it must demonstrate **intelligent information gathering**.
+Wrong decisions don't just cost points — they spawn **new objectives** that the agent must handle:
 
-## Results: Naive vs. Smart Agent
+| Trigger | Cascade | Timing |
+|---------|---------|--------|
+| Resolve ticket with wrong type | Client escalation (TKT-200) | 3 steps later |
+| Close deal without compliance | Regulatory audit | 5 steps later |
+| 3+ deprecated API calls | Rate limit (429 on all endpoints) | Immediate |
 
-We ran two scripted strategies across all tasks:
+The cascading system uses a deferred-event architecture: triggers enqueue events with a countdown, and each step ticks them down. When they fire, new objectives appear in the task brief and the agent must handle them alongside its original work.
 
-| Task | Naive (Pre-Training) | Smart (Post-Training) | Improvement |
-|------|---------------------|----------------------|-------------|
-| Easy | 0.80 | 0.90 | +0.10 |
-| Medium | 0.59 | 0.90 | +0.31 |
-| Hard | 0.51 | 0.82 | +0.31 |
-| **Average** | **0.63** | **0.87** | **+0.24** |
+This means a single bad decision at step 8 can derail the entire episode at step 11 — exactly like real enterprise work.
 
-### What the Naive Agent Gets Wrong
+## The Environment
 
-1. **Follows bad manager advice** → Uses "refund" instead of "technical_fix" for tickets
-2. **Retries deprecated endpoints** → Hits v1 404 three times before trying v2
-3. **Skips compliance steps** → Doesn't generate compliance_id on hard task
-4. **Doesn't cross-check** → Takes first answer as truth
+### Three Tiers of Chaos
 
-### What the Smart Agent Does Right
+| Tier | Objectives | Drifts | Unreliable Sources | Cascades | Max Steps |
+|------|-----------|--------|-------------------|----------|-----------|
+| **Easy** | Close deal + report | 1 | 0 | None | 40 |
+| **Medium** | Deal + ticket + 2 reports | 2 | 3 | Escalation | 60 |
+| **Hard** | Full audit pipeline | 3 | 5 | Full chain | 100 |
 
-1. **Cross-verifies** → Checks policy after manager says "just refund"
-2. **Reads error messages** → 404 says "migrated to v2", immediately switches
-3. **Follows the compliance chain** → Generates compliance_id, includes in deal + report
-4. **Consults multiple sources** → CRM (truth) + docs + policy before acting
+### 9 MCP Tools
 
-## Training: LoRA Fine-Tuning on Expert Trajectories
+Built on FastMCP, the agent has access to:
+- `read_task_brief` — Current objectives and their completion status
+- `query_crm` — Look up deals, clients, or support tickets
+- `check_policy` — Query company policies on compliance, complaints, approvals
+- `read_docs` — Read technical documentation (may be outdated)
+- `ask_manager` — Ask for advice (may be wrong)
+- `call_api` — Execute HTTP calls against the enterprise API
+- `resolve_ticket` — Close a support ticket with a resolution
+- `submit_report` — File reports (deal closure, compliance, incident, audit)
+- `send_message` — Communicate with team members
 
-We collected expert trajectories (the "smart" strategy) and fine-tuned Llama-3.2-1B-Instruct using:
+### The Hard Task: A Case Study
 
-- **Unsloth** for 2x faster LoRA training
-- **TRL's SFTTrainer** with ChatML-formatted conversations
-- **4-bit quantization** (runs on free Colab T4)
-- 3 epochs, lr=2e-4, LoRA r=16
+On hard difficulty, the agent must:
 
-The training teaches the model three key behaviors:
-1. Always read docs/policy before calling APIs
-2. When an API returns 404, check for migration
-3. Cross-check manager advice against policy before acting on tickets
+1. Close DEAL-001 ($75K Acme Corp) — but v1 API is about to deprecate
+2. Resolve TKT-100 (data export failure) — but manager says "just refund it"
+3. Close DEAL-002 ($120K Bolt Industries) — requires compliance_id that only exists in v2
+4. Resolve TKT-101 (SSO login failure) — docs show wrong resolution type
+5. File compliance report, audit summary, and incident report — referencing correct IDs
+
+All while 3 drifts fire at stochastic intervals, the manager gives wrong advice on 2 topics, documentation is outdated on 3 topics, and wrong decisions spawn cascading failures.
+
+## 5-Axis Grading
+
+We decomposed "good agent behavior" into five independently measurable components:
+
+| Axis | Weight | What It Measures |
+|------|--------|------------------|
+| **Task Completion** | 35% | Did you finish all objectives with correct data? |
+| **Source Accuracy** | 25% | Did you verify unreliable sources before acting on them? |
+| **Drift Adaptation** | 20% | How quickly did you recover after schema changes? (Steps between 404 and successful retry) |
+| **Cascade Recovery** | 10% | Did you avoid triggering cascades? If triggered, did you handle the fallout? |
+| **Efficiency** | 10% | Steps used vs. minimum possible |
+
+The grading is fully deterministic — no LLM judge, no subjective rubric. Given a trajectory, the score is reproducible.
+
+### Why This Decomposition?
+
+- **Task Completion alone is insufficient** — an agent that completes everything but trusts bad sources would score 35/100
+- **Source Accuracy rewards verification** — agents must check CRM/policy before acting on manager/docs advice
+- **Drift Adaptation rewards resilience** — recovering in 1 step after a 404 vs. 5 steps makes a measurable difference
+- **Cascade Recovery rewards foresight** — not triggering cascades in the first place earns full marks
+- **Efficiency prevents brute-force** — calling every tool every step is penalized
+
+## Results
+
+We evaluated two scripted strategies:
+
+| Task | Naive Agent | Smart Agent | Δ Score | Δ Relative |
+|------|------------|------------|---------|-----------|
+| Easy | 0.80 | 0.90 | +0.10 | +12.5% |
+| Medium | 0.59 | 0.90 | +0.31 | +52.5% |
+| Hard | 0.51 | 0.82 | +0.31 | +60.8% |
+| **Average** | **0.63** | **0.87** | **+0.24** | **+38.1%** |
+
+### What Separates Them
+
+**The naive agent:**
+- Follows manager advice without cross-checking → uses "refund" instead of "technical_fix"
+- Retries deprecated v1 endpoint 3 times before trying v2
+- Skips compliance_id generation → triggers regulatory audit cascade
+- Never reads error messages carefully
+
+**The smart agent:**
+- Reads task brief first, then CRM (ground truth), then policy
+- On 404: reads the error message, checks docs, switches to v2 in one step
+- Cross-checks manager against policy before resolving tickets
+- Generates compliance_id proactively before closing high-value deals
+- Avoids all cascading consequences by making correct decisions upfront
+
+## Training: LoRA Fine-Tuning
+
+We fine-tune **Llama-3.2-1B-Instruct** on curated expert trajectories using:
+
+| Parameter | Value |
+|-----------|-------|
+| Framework | Unsloth + TRL SFTTrainer |
+| Quantization | 4-bit (QLoRA) |
+| LoRA rank | 16 |
+| LoRA alpha | 32 |
+| Target modules | q, k, v, o, gate, up, down projections |
+| Epochs | 3 |
+| Learning rate | 2e-4 (cosine decay) |
+| Hardware | Free Colab T4 GPU |
+
+### Expert Trajectories
+
+Each trajectory is a conversation in Llama ChatML format:
+
+```
+<|system|> You are an AI enterprise agent at Nexus Corp...
+<|user|> Task: Close DEAL-001 and submit report.
+<|assistant|> {"tool_name": "read_task_brief", "arguments": {}}
+<|user|> Result: {objectives: ...}
+<|assistant|> {"tool_name": "read_docs", "arguments": {"topic": "api_usage"}}
+...
+```
+
+We embed 4 curated trajectories covering:
+1. **Basic workflow** — optimal path with no drift
+2. **Drift recovery** — hits v1 404, reads error, switches to v2
+3. **Cross-verification** — manager says "refund", agent checks policy, uses "technical_fix"
+4. **Full compliance chain** — v1→v2 migration + compliance_id generation + cascade avoidance
+
+### What the Model Learns
+
+The three key behavioral shifts:
+1. **Verify before acting** — always check docs/policy before calling an API
+2. **Read error messages** — 404 responses contain migration hints; parse and adapt
+3. **Cross-reference adversarial sources** — when manager and policy disagree, trust policy
 
 ## Architecture
 
-Built on the [OpenEnv](https://github.com/meta-pytorch/OpenEnv) framework:
-- `MCPEnvironment` base class with `FastMCP` tools
-- Custom HTTP routes with singleton environment for stateful episodes
-- Deterministic grading with 4-component scoring
-- WebSocket support for MCP Playground
-- Fully validated: 6/6 `openenv validate` checks, 29 unit tests
+```
+┌─────────────────────────────────────────────────┐
+│                  AI Agent (LLM)                  │
+│          Llama-3.2-1B-Instruct + LoRA           │
+└────────────────────┬────────────────────────────┘
+                     │ MCP tool calls
+                     ▼
+┌─────────────────────────────────────────────────┐
+│              Enterprise Arena                    │
+│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐│
+│  │ 9 MCP    │ │ Drift    │ │   Cascade        ││
+│  │ Tools    │ │ Engine   │ │   Engine         ││
+│  │          │ │          │ │                   ││
+│  │ CRM      │ │ Stoch.   │ │ Deferred-event   ││
+│  │ API      │ │ trigger  │ │ queue with        ││
+│  │ Docs     │ │ windows  │ │ countdown timers  ││
+│  │ Manager  │ │ per seed │ │                   ││
+│  │ Policy   │ │          │ │ wrong_ticket →    ││
+│  │ Reports  │ │ API v1→2 │ │   escalation(3)  ││
+│  │ Tickets  │ │ +field   │ │ no_compliance →   ││
+│  │ Messages │ │ +policy  │ │   audit(5)        ││
+│  └──────────┘ └──────────┘ └──────────────────┘│
+│                                                  │
+│  ┌──────────────────────────────────────────────┐│
+│  │              Trust System                     ││
+│  │  CRM: 1.0  API: 0.7  Docs: 0.45  Mgr: 0.30 ││
+│  │  < 0.35 → source unavailable                 ││
+│  │  < 0.50 → reliability warnings               ││
+│  └──────────────────────────────────────────────┘│
+│                                                  │
+│  ┌──────────────────────────────────────────────┐│
+│  │            5-Axis Grader                      ││
+│  │  Completion 35% | Sources 25% | Drift 20%    ││
+│  │  Cascade 10%    | Efficiency 10%              ││
+│  └──────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────┘
+```
+
+Built on [OpenEnv](https://github.com/meta-pytorch/OpenEnv) v0.2.3:
+- `MCPEnvironment` base class with `FastMCP` tool registration
+- Singleton stateful environment with HTTP API (`/step`, `/reset`, `/state`)
+- Gradio Playground at `/web/` for interactive exploration
+- React landing page with live episode simulation
+- Fully deterministic seeded randomness for reproducibility
+- 40 unit tests covering all mechanics
+- Docker deployment on Hugging Face Spaces
+
+## What We'd Build Next
+
+1. **Multi-agent mode** — A compliance auditor agent that can block or approve the primary agent's actions
+2. **Dynamic difficulty** — Adjust drift frequency and cascade severity based on agent performance in real-time
+3. **Richer cascading chains** — Multi-hop consequences where cascade A triggers cascade B
+4. **Human-in-the-loop evaluation** — Let humans play through episodes to establish a ceiling
 
 ## Try It
 
-- **Live Space**: [Vjindal26/enterprise-arena](https://huggingface.co/spaces/Vjindal26/enterprise-arena)
+- **Live Demo**: [vjindal26-enterprise-arena.hf.space](https://vjindal26-enterprise-arena.hf.space)
+- **Playground**: [vjindal26-enterprise-arena.hf.space/web/](https://vjindal26-enterprise-arena.hf.space/web/)
 - **GitHub**: [vjindal989/enterprise-arena](https://github.com/vjindal989/enterprise-arena)
-- **Train on Colab**: Clone the repo, run `python train_colab.py`
+- **Train on Colab**: `pip install unsloth trl && python train_colab.py`
 
 ---
 
-*Built for the OpenEnv Hackathon Round 2. The environment is deterministic and fully reproducible.*
+*Built for the OpenEnv Hackathon Round 2. 40/40 tests passing. Deterministic and fully reproducible.*
