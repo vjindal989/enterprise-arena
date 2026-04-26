@@ -593,6 +593,17 @@ export default function App() {
             >
               GitHub ↗
             </a>
+            <a href="https://huggingface.co/Vjindal26/ea-agent-lora" target="_blank" rel="noopener" style={{
+              padding: '14px 32px', borderRadius: 10,
+              background: 'transparent', border: `1px solid ${COLORS.border}`,
+              color: COLORS.text, fontWeight: 600, fontSize: 16, textDecoration: 'none',
+              transition: 'border-color .2s', display: 'inline-block',
+            }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = COLORS.accent}
+              onMouseLeave={e => e.currentTarget.style.borderColor = COLORS.border}
+            >
+              🤗 LoRA Adapter ↗
+            </a>
           </div>
         </div>
 

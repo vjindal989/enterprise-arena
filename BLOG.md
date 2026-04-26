@@ -234,6 +234,19 @@ The three key behavioral shifts:
 2. **Read error messages** — 404 responses contain migration hints; parse and adapt
 3. **Cross-reference adversarial sources** — when manager and policy disagree, trust policy
 
+### Trained Adapter
+
+The fine-tuned LoRA adapter is available on HuggingFace: [`Vjindal26/ea-agent-lora`](https://huggingface.co/Vjindal26/ea-agent-lora)
+
+```python
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+base = AutoModelForCausalLM.from_pretrained("unsloth/Llama-3.2-1B-Instruct")
+model = PeftModel.from_pretrained(base, "Vjindal26/ea-agent-lora")
+tokenizer = AutoTokenizer.from_pretrained("Vjindal26/ea-agent-lora")
+```
+
 ## Architecture
 
 ```
@@ -246,7 +259,7 @@ The three key behavioral shifts:
 ┌─────────────────────────────────────────────────┐
 │              Enterprise Arena                    │
 │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐│
-│  │ 9 MCP    │ │ Drift    │ │   Cascade        ││
+│  │ 11 MCP   │ │ Drift    │ │   Cascade        ││
 │  │ Tools    │ │ Engine   │ │   Engine         ││
 │  │          │ │          │ │                   ││
 │  │ CRM      │ │ Stoch.   │ │ Deferred-event   ││

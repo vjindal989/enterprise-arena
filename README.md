@@ -17,7 +17,7 @@ tags:
 
 An OpenEnv environment where AI agents navigate realistic enterprise workflows under **stochastic schema drift**, **adversarial information sources**, **functional trust degradation**, **cascading consequences**, **multi-agent compliance auditing**, and **dynamic difficulty scaling**.
 
-**[Live Demo](https://vjindal26-enterprise-arena.hf.space)** · **[Playground](https://vjindal26-enterprise-arena.hf.space/web/)** · **[Blog](BLOG.md)**
+**[Live Demo](https://vjindal26-enterprise-arena.hf.space)** · **[Playground](https://vjindal26-enterprise-arena.hf.space/web/)** · **[Blog](BLOG.md)** · **[LoRA Adapter](https://huggingface.co/Vjindal26/ea-agent-lora)**
 
 ## What Makes It Hard
 
@@ -86,6 +86,12 @@ python train_colab.py --data trajectories.jsonl --epochs 3
 ```
 
 **Verified on Google Colab T4** — Llama-3.2-1B-Instruct, 11.3M trainable params (0.90%), 6 expert trajectories, 3 epochs in ~9 seconds. Training loss: 2.16 → 1.79 (−17%).
+
+**LoRA adapter:** [`Vjindal26/ea-agent-lora`](https://huggingface.co/Vjindal26/ea-agent-lora) — push your own with:
+
+```bash
+python train_colab.py --push-to-hub Vjindal26/ea-agent-lora --hf-token $HF_TOKEN
+```
 
 ## API
 

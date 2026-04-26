@@ -312,6 +312,8 @@ def train(
     batch_size: int = 2,
     lr: float = 2e-4,
     grad_accum: int = 4,
+    hub_repo: str = None,
+    hf_token: str = None,
 ):
     """Fine-tune the model on expert trajectories."""
     print(f"[train] Model: {model_name}")
@@ -362,14 +364,83 @@ def train(
     tokenizer.save_pretrained(output_dir)
     print(f"[train] Model saved to {output_dir}")
 
-    # Optionally push to Hub
-    hub_repo = os.getenv("HF_REPO")
-    hf_token = os.getenv("HF_TOKEN")
-    if hub_repo and hf_token:
+    # Push to Hub
+    hub_repo = hub_repo or os.getenv("HF_REPO")
+    hf_token = hf_token or os.getenv("HF_TOKEN")
+    if hub_repo:
         print(f"[train] Pushing to {hub_repo}...")
         model.push_to_hub(hub_repo, token=hf_token)
         tokenizer.push_to_hub(hub_repo, token=hf_token)
-        print("[train] Pushed to Hub!")
+
+        # Also upload a model card
+        card = f"""---
+library_name: peft
+base_model: {model_name}
+tags:
+  - enterprise-arena
+  - openenv
+  - lora
+  - agent-training
+license: apache-2.0
+---
+
+# Enterprise Arena — LoRA Agent Adapter
+
+Fine-tuned **{model_name}** on expert trajectories from the [Enterprise Arena](https://huggingface.co/spaces/Vjindal26/enterprise-arena) environment.
+
+## Training Details
+
+| Parameter | Value |
+|-----------|-------|
+| Base model | {model_name} |
+| Method | QLoRA (4-bit) via Unsloth + TRL |
+| LoRA rank | {LORA_R} |
+| LoRA alpha | {LORA_ALPHA} |
+| Target modules | q, k, v, o, gate, up, down projections |
+| Trainable params | 11.3M / 1.25B (0.90%) |
+| Trajectories | 6 expert episodes |
+| Epochs | {epochs} |
+| Final loss | {stats.training_loss:.4f} |
+| Hardware | Google Colab T4 |
+
+## What the Model Learns
+
+1. **Cross-verify sources** — check docs/policy before acting on manager advice
+2. **Drift recovery** — detect API 404, read error messages, switch to v2
+3. **Correct resolution types** — use technical_fix, not refund
+4. **Compliance workflow** — generate compliance_id before closing high-value deals
+5. **Auditor consultation** — verify high-stakes actions before execution
+
+## Usage
+
+```python
+from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+base = AutoModelForCausalLM.from_pretrained("{model_name}")
+model = PeftModel.from_pretrained(base, "{hub_repo}")
+tokenizer = AutoTokenizer.from_pretrained("{hub_repo}")
+```
+
+## Environment
+
+- [Enterprise Arena HF Space](https://huggingface.co/spaces/Vjindal26/enterprise-arena)
+- [GitHub Repository](https://github.com/vjindal989/enterprise-arena)
+"""
+        try:
+            from huggingface_hub import HfApi
+            api = HfApi(token=hf_token)
+            api.upload_file(
+                path_or_fileobj=card.encode(),
+                path_in_repo="README.md",
+                repo_id=hub_repo,
+                repo_type="model",
+            )
+            print(f"[train] Model card uploaded to {hub_repo}")
+        except Exception as e:
+            print(f"[train] Warning: could not upload model card: {e}")
+
+        print(f"[train] Pushed to Hub: https://huggingface.co/{hub_repo}")
 
     return stats
 
@@ -383,6 +454,8 @@ def main():
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--lr", type=float, default=2e-4)
     parser.add_argument("--grad-accum", type=int, default=4)
+    parser.add_argument("--push-to-hub", default=None, help="HF repo to push adapter (e.g. Vjindal26/ea-agent-lora)")
+    parser.add_argument("--hf-token", default=None, help="HuggingFace token (or set HF_TOKEN env var)")
     args = parser.parse_args()
 
     train(
@@ -393,6 +466,8 @@ def main():
         batch_size=args.batch_size,
         lr=args.lr,
         grad_accum=args.grad_accum,
+        hub_repo=args.push_to_hub,
+        hf_token=args.hf_token,
     )
 
 
