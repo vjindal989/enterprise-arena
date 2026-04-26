@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enterprise Arena: When the World Fights Back</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a2e;
+    --border: #1e1e2e;
+    --accent: #6c63ff;
+    --accent-glow: rgba(108,99,255,.35);
+    --green: #00e676;
+    --amber: #ffab00;
+    --red: #ff5252;
+    --text: #e0e0e0;
+    --dim: #888;
+    --white: #fff;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.75;
+    font-size: 17px;
+  }
+  ::selection { background: var(--accent); color: var(--white); }
+
+  .blog-container { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── Hero ── */
+  .hero {
+    min-height: 75vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 120px 0 80px;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(108,99,255,.12);
+    border: 1px solid rgba(108,99,255,.3);
+    color: var(--accent);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+  .hero h1 {
+    font-size: clamp(2.5rem, 5vw, 4rem);
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--white);
+    margin-bottom: 20px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    font-size: 1.2rem;
+    color: var(--dim);
+    max-width: 640px;
+    margin-bottom: 36px;
+    line-height: 1.7;
+  }
+  .hero-stats { display: flex; gap: 40px; flex-wrap: wrap; }
+  .hero-stat { text-align: center; }
+  .hero-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .hero-stat-label {
+    font-size: 12px;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px 32px;
+    margin-bottom: 64px;
+  }
+  .toc h3 {
+    color: var(--white);
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 16px;
+  }
+  .toc ol {
+    padding-left: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .toc li { font-size: 15px; }
+  .toc a { color: var(--text); text-decoration: none; transition: color .2s; }
+  .toc a:hover { color: var(--accent); }
+
+  /* ── Section ── */
+  section { margin-bottom: 80px; scroll-margin-top: 40px; }
+  section h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  section h2 .sec-num {
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    margin-right: 12px;
+  }
+  section h3 { font-size: 1.35rem; font-weight: 600; color: var(--white); margin: 40px 0 16px; }
+  section p { margin-bottom: 16px; }
+
+  /* ── Callout ── */
+  .callout {
+    background: var(--surface);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 15px;
+  }
+  .callout.insight { border-left-color: var(--green); }
+  .callout.warning { border-left-color: var(--amber); }
+  .callout.danger { border-left-color: var(--red); }
+  .callout-title { font-weight: 600; color: var(--white); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+  /* ── Code ── */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin: 20px 0;
+  }
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(108,99,255,.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+  pre code { background: none; padding: 0; }
+  .code-label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: -12px; display: block; }
+
+  /* ── Tables ── */
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 15px; }
+  th {
+    background: var(--surface);
+    color: var(--white);
+    font-weight: 600;
+    text-align: left;
+    padding: 12px 16px;
+    border-bottom: 2px solid var(--accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: rgba(108,99,255,.04); }
+
+  /* ── Feature cards ── */
+  .feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; margin: 28px 0; }
+  .feature-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    transition: border-color .25s, transform .2s;
+  }
+  .feature-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .feature-card .icon { font-size: 28px; margin-bottom: 12px; }
+  .feature-card h4 { color: var(--white); font-size: 1.1rem; margin-bottom: 8px; }
+  .feature-card p { color: var(--dim); font-size: 14px; line-height: 1.6; margin: 0; }
+
+  /* ── Drift demo ── */
+  .drift-demo {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin: 28px 0;
+  }
+  .drift-timeline { display: flex; gap: 0; margin-top: 16px; }
+  .drift-step {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    border-radius: 6px;
+    transition: all .3s ease;
+    cursor: pointer;
+  }
+  .drift-step.ok { background: rgba(0,230,118,.1); color: var(--green); }
+  .drift-step.drift { background: rgba(255,82,82,.15); color: var(--red); }
+  .drift-step.error { background: rgba(255,171,0,.1); color: var(--amber); }
+  .drift-step.recover { background: rgba(108,99,255,.15); color: var(--accent); }
+  .drift-step.active { transform: scale(1.05); box-shadow: 0 0 20px var(--accent-glow); }
+  .drift-step-label { font-size: 10px; margin-top: 4px; display: block; opacity: 0.7; }
+  .drift-detail {
+    margin-top: 16px;
+    padding: 16px;
+    background: rgba(0,0,0,.3);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    min-height: 60px;
+  }
+
+  /* ── Score bars ── */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    margin: 28px 0;
+  }
+  .bar-group { display: flex; align-items: center; margin-bottom: 16px; gap: 12px; }
+  .bar-label { width: 80px; font-size: 14px; font-weight: 500; text-align: right; }
+  .bar-track {
+    flex: 1;
+    height: 36px;
+    background: rgba(255,255,255,.04);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--white);
+    transition: width 1.5s cubic-bezier(.4,0,.2,1);
+  }
+  .bar-fill.naive { background: linear-gradient(90deg, rgba(255,82,82,.6), rgba(255,82,82,.3)); }
+  .bar-fill.smart { background: linear-gradient(90deg, rgba(0,230,118,.6), rgba(0,230,118,.3)); }
+
+  /* ── Loss chart ── */
+  .loss-chart { display: flex; align-items: flex-end; gap: 12px; height: 180px; padding: 0 20px; margin: 20px 0; }
+  .loss-bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+  .loss-bar { width: 100%; max-width: 80px; border-radius: 6px 6px 0 0; transition: height 1s ease; position: relative; }
+  .loss-bar-value { position: absolute; top: -24px; left: 50%; transform: translateX(-50%); font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .loss-bar-label { font-size: 12px; color: var(--dim); margin-top: 8px; }
+
+  /* ── Trust bars ── */
+  .trust-row { display: flex; align-items: center; margin-bottom: 10px; gap: 12px; }
+  .trust-name { width: 100px; font-size: 14px; text-align: right; font-weight: 500; }
+  .trust-track { flex: 1; height: 24px; background: rgba(255,255,255,.04); border-radius: 4px; overflow: hidden; position: relative; }
+  .trust-fill { height: 100%; border-radius: 4px; transition: width 1.5s ease; }
+  .trust-val { width: 50px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 500; }
+  .trust-threshold { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--red); opacity: .6; }
+  .trust-threshold-label { position: absolute; top: -18px; font-size: 10px; color: var(--red); transform: translateX(-50%); white-space: nowrap; }
+
+  /* ── Collapsible ── */
+  .collapsible { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin: 16px 0; overflow: hidden; }
+  .collapsible-header {
+    padding: 16px 20px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    color: var(--white);
+    transition: background .2s;
+    user-select: none;
+  }
+  .collapsible-header:hover { background: var(--surface2); }
+  .collapsible-arrow { transition: transform .3s; font-size: 12px; color: var(--dim); }
+  .collapsible.open .collapsible-arrow { transform: rotate(180deg); }
+  .collapsible-body { max-height: 0; overflow: hidden; transition: max-height .4s ease, padding .3s; padding: 0 20px; }
+  .collapsible.open .collapsible-body { max-height: 2000px; padding: 0 20px 20px; }
+
+  /* ── Screenshot frame ── */
+  .screenshot-frame {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  .screenshot-topbar { background: var(--surface2); padding: 10px 16px; display: flex; align-items: center; gap: 8px; }
+  .screenshot-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .screenshot-url {
+    flex: 1;
+    background: rgba(0,0,0,.3);
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--dim);
+    margin-left: 8px;
+  }
+  .screenshot-frame iframe { width: 100%; display: block; border: none; }
+  .screenshot-caption { padding: 12px 16px; font-size: 13px; color: var(--dim); text-align: center; font-style: italic; }
+
+  /* ── Nav ── */
+  .blog-nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: rgba(10,10,15,.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .blog-nav a { color: var(--text); text-decoration: none; font-size: 14px; font-weight: 500; transition: color .2s; }
+  .blog-nav a:hover { color: var(--accent); }
+  .blog-nav-brand { font-weight: 700; color: var(--white) !important; font-size: 16px !important; }
+  .blog-nav-links { display: flex; gap: 24px; }
+
+  /* ── Footer ── */
+  .blog-footer { border-top: 1px solid var(--border); padding: 40px 0; text-align: center; color: var(--dim); font-size: 14px; margin-top: 80px; }
+  .blog-footer a { color: var(--accent); text-decoration: none; }
+
+  /* ── Arch SVG ── */
+  .arch-svg-wrap { margin: 28px 0; text-align: center; overflow-x: auto; }
+  .arch-svg-wrap svg text { font-family: 'Inter', sans-serif; }
+
+  /* ── Animations ── */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-up { opacity: 0; animation: fadeUp .6s ease forwards; }
+  .fade-up.d1 { animation-delay: .1s; }
+  .fade-up.d2 { animation-delay: .2s; }
+  .fade-up.d3 { animation-delay: .3s; }
+
+  @media (max-width: 700px) {
+    .toc ol { grid-template-columns: 1fr; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .hero-stats { gap: 24px; }
+    .blog-nav-links { gap: 12px; }
+    .blog-nav-links a { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="blog-nav">
+  <a href="/" class="blog-nav-brand">Enterprise Arena</a>
+  <div class="blog-nav-links">
+    <a href="/">Home</a>
+    <a href="/web/">Playground</a>
+    <a href="https://github.com/vjindal989/enterprise-arena" target="_blank">GitHub</a>
+    <a href="https://huggingface.co/Vjindal26/ea-agent-lora" target="_blank">Model</a>
+  </div>
+</nav>
+
+<div class="blog-container">
+
+<!-- ═══════ HERO ═══════ -->
+<header class="hero">
+  <div class="hero-badge">OpenEnv Round 2 &middot; Hackathon Entry</div>
+  <h1 class="fade-up">Enterprise Arena:<br><span>When the World Fights Back</span></h1>
+  <p class="hero-sub fade-up d1">
+    We built an OpenEnv environment where AI agents must navigate stochastic schema drift,
+    adversarial coworkers, cascading consequences, and functional trust degradation &mdash;
+    all while completing real business workflows.
+  </p>
+  <div class="hero-stats fade-up d2">
+    <div class="hero-stat"><div class="hero-stat-value">11</div><div class="hero-stat-label">MCP Tools</div></div>
+    <div class="hero-stat"><div class="hero-stat-value">48</div><div class="hero-stat-label">Tests Passing</div></div>
+    <div class="hero-stat"><div class="hero-stat-value">+86%</div><div class="hero-stat-label">Reward Improvement</div></div>
+    <div class="hero-stat"><div class="hero-stat-value">5</div><div class="hero-stat-label">Grading Axes</div></div>
+  </div>
+</header>
+
+<!-- ═══════ TOC ═══════ -->
+<div class="toc fade-up d3">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#motivation">Why This Matters</a></li>
+    <li><a href="#mechanics">Six Interlocking Mechanics</a></li>
+    <li><a href="#environment">The Environment</a></li>
+    <li><a href="#grading">5-Axis Grading</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#training">LoRA Training</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#try-it">Try It</a></li>
+  </ol>
+</div>
+
+<!-- ═══════ 01. MOTIVATION ═══════ -->
+<section id="motivation">
+  <h2><span class="sec-num">01</span>Why This Matters</h2>
+  <p>Every AI agent benchmark makes the same mistake: <strong>the world holds still.</strong></p>
+  <p>Real enterprise work isn't like that. The API you called on Monday returns <code>404</code> on Tuesday because someone merged a migration. Your manager tells you to "just process a refund" because they haven't read the new complaint-handling policy. The documentation wiki still shows v1 examples two months after the v2 rollout.</p>
+  <p>And when you make a mistake &mdash; closing a deal without a compliance ID &mdash; you don't just lose points. Three steps later, a regulatory audit lands in your inbox.</p>
+
+  <div class="callout insight">
+    <div class="callout-title">&#128161; Core Insight</div>
+    In the real world, information has <strong>variable reliability</strong>, and that reliability <strong>changes over time</strong>. We built Enterprise Arena to test whether agents can adapt, verify, and recover &mdash; not just follow instructions.
+  </div>
+</section>
+
+<!-- ═══════ 02. MECHANICS ═══════ -->
+<section id="mechanics">
+  <h2><span class="sec-num">02</span>Six Interlocking Mechanics</h2>
+
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="icon">&#128256;</div>
+      <h4>Stochastic Drift</h4>
+      <p>API schemas, required fields, and policy thresholds shift at unpredictable moments within randomized windows. Each episode seeds its own random generator.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#127917;</div>
+      <h4>Adversarial Sources</h4>
+      <p>Not all tools tell the truth. Manager gives wrong advice. Documentation is outdated. Only CRM and policy are ground truth.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#128201;</div>
+      <h4>Functional Trust</h4>
+      <p>Trust scores change tool behavior. Manager trust &lt; 35% &rarr; unavailable. Docs trust &lt; 50% &rarr; reliability warnings appended.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#128165;</div>
+      <h4>Cascading Consequences</h4>
+      <p>Wrong decisions spawn new objectives. Bad ticket resolution &rarr; client escalation 3 steps later. Missing compliance &rarr; regulatory audit.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#128269;</div>
+      <h4>Compliance Auditor</h4>
+      <p>A multi-agent auditor reviews high-stakes actions. Returns APPROVED, BLOCKED, or WARNING based on current policies and drift state.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">&#9889;</div>
+      <h4>Dynamic Difficulty</h4>
+      <p>Environment adapts mid-episode. Fast recovery &rarr; harder conditions. Struggling agent &rarr; extended step limit.</p>
+    </div>
+  </div>
+
+  <!-- Interactive Drift Timeline -->
+  <h3>Drift in Action</h3>
+  <p>Click through each step to see how stochastic drift plays out in a real episode:</p>
+
+  <div class="drift-demo">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <strong style="color:var(--white)">API Migration Drift (Easy Task)</strong>
+      <button id="drift-play-btn" style="background:var(--accent);color:var(--white);border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">&#9654; Auto-Play</button>
+    </div>
+    <div class="drift-timeline" id="drift-timeline"></div>
+    <div class="drift-detail" id="drift-detail">
+      <span style="color:var(--dim)">&larr; Click a step or press Auto-Play</span>
+    </div>
+  </div>
+
+  <!-- Trust Degradation -->
+  <h3>Functional Trust Degradation</h3>
+  <p>Watch how trust scores evolve as sources provide bad information:</p>
+
+  <div class="chart-container">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <strong style="color:var(--white)">Trust Scores (Medium Task, Step 25)</strong>
+      <button id="trust-animate-btn" style="background:var(--accent);color:var(--white);border:none;padding:6px 16px;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">&#9654; Simulate</button>
+    </div>
+    <div id="trust-bars">
+      <div class="trust-row">
+        <div class="trust-name">CRM</div>
+        <div class="trust-track"><div class="trust-fill" id="trust-crm" style="width:100%;background:var(--green)"></div></div>
+        <div class="trust-val" id="trust-crm-val">1.00</div>
+      </div>
+      <div class="trust-row">
+        <div class="trust-name">Policy</div>
+        <div class="trust-track"><div class="trust-fill" id="trust-policy" style="width:85%;background:var(--green)"></div></div>
+        <div class="trust-val" id="trust-policy-val">0.85</div>
+      </div>
+      <div class="trust-row">
+        <div class="trust-name">API</div>
+        <div class="trust-track">
+          <div class="trust-threshold" style="left:50%"><span class="trust-threshold-label">warning</span></div>
+          <div class="trust-fill" id="trust-api" style="width:70%;background:var(--amber)"></div>
+        </div>
+        <div class="trust-val" id="trust-api-val">0.70</div>
+      </div>
+      <div class="trust-row">
+        <div class="trust-name">Docs</div>
+        <div class="trust-track">
+          <div class="trust-threshold" style="left:50%"><span class="trust-threshold-label">warning</span></div>
+          <div class="trust-fill" id="trust-docs" style="width:45%;background:var(--amber)"></div>
+        </div>
+        <div class="trust-val" id="trust-docs-val">0.45</div>
+      </div>
+      <div class="trust-row">
+        <div class="trust-name">Manager</div>
+        <div class="trust-track">
+          <div class="trust-threshold" style="left:35%"><span class="trust-threshold-label">unavail</span></div>
+          <div class="trust-fill" id="trust-mgr" style="width:30%;background:var(--red)"></div>
+        </div>
+        <div class="trust-val" id="trust-mgr-val">0.30</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cascade table -->
+  <h3>Cascading Consequences</h3>
+  <div class="callout danger">
+    <div class="callout-title">&#9888;&#65039; A Single Mistake at Step 8 Derails the Episode at Step 11</div>
+    Wrong decisions don't just cost points &mdash; they spawn <strong>new objectives</strong> the agent must handle.
+  </div>
+  <table>
+    <thead><tr><th>Trigger</th><th>Cascade Event</th><th>Timing</th></tr></thead>
+    <tbody>
+      <tr><td>Resolve ticket with wrong type</td><td style="color:var(--amber)">Client escalation (TKT-200)</td><td>3 steps later</td></tr>
+      <tr><td>Close deal without compliance</td><td style="color:var(--red)">Regulatory audit</td><td>5 steps later</td></tr>
+      <tr><td>3+ deprecated API calls</td><td style="color:var(--red)">Rate limit (429 on all endpoints)</td><td>Immediate</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ═══════ 03. ENVIRONMENT ═══════ -->
+<section id="environment">
+  <h2><span class="sec-num">03</span>The Environment</h2>
+
+  <h3>Three Tiers of Chaos</h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Objectives</th><th>Drifts</th><th>Unreliable Sources</th><th>Cascades</th><th>Max Steps</th></tr></thead>
+    <tbody>
+      <tr><td><strong style="color:var(--green)">Easy</strong></td><td>Close deal + report</td><td>1</td><td>0</td><td>None</td><td>40</td></tr>
+      <tr><td><strong style="color:var(--amber)">Medium</strong></td><td>Deal + ticket + 2 reports</td><td>2</td><td>3</td><td>Escalation</td><td>60</td></tr>
+      <tr><td><strong style="color:var(--red)">Hard</strong></td><td>Full audit pipeline</td><td>3</td><td>5</td><td>Full chain</td><td>100</td></tr>
+    </tbody>
+  </table>
+
+  <h3>11 MCP Tools</h3>
+  <div class="collapsible" id="tools-collapsible">
+    <div class="collapsible-header" onclick="toggleCollapsible('tools-collapsible')">
+      <span>View all 11 tools &rarr;</span>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <table>
+        <thead><tr><th>Tool</th><th>Purpose</th><th>Trust Affected?</th></tr></thead>
+        <tbody>
+          <tr><td><code>read_task_brief</code></td><td>Current objectives and completion status</td><td>&mdash;</td></tr>
+          <tr><td><code>query_crm</code></td><td>Look up deals, clients, tickets</td><td>Always accurate</td></tr>
+          <tr><td><code>check_policy</code></td><td>Company policies (can drift)</td><td>Authoritative</td></tr>
+          <tr><td><code>read_docs</code></td><td>Technical docs (may be outdated)</td><td style="color:var(--amber)">&#9888; Unreliable</td></tr>
+          <tr><td><code>ask_manager</code></td><td>Manager advice (may be wrong)</td><td style="color:var(--red)">&#9888; Unreliable</td></tr>
+          <tr><td><code>call_api</code></td><td>Execute HTTP calls</td><td style="color:var(--amber)">Can break</td></tr>
+          <tr><td><code>resolve_ticket</code></td><td>Close a support ticket</td><td>&mdash;</td></tr>
+          <tr><td><code>submit_report</code></td><td>File reports</td><td>&mdash;</td></tr>
+          <tr><td><code>send_message</code></td><td>Team communication</td><td>&mdash;</td></tr>
+          <tr><td><code>consult_auditor</code></td><td>Compliance review</td><td>&mdash;</td></tr>
+          <tr><td><code>get_status</code></td><td>Progress, trust, notifications</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Playground embed -->
+  <h3>Interactive Playground</h3>
+  <p>Every tool is testable in our live Gradio playground:</p>
+  <div class="screenshot-frame">
+    <div class="screenshot-topbar">
+      <div class="screenshot-dot" style="background:#ff5f56"></div>
+      <div class="screenshot-dot" style="background:#ffbd2e"></div>
+      <div class="screenshot-dot" style="background:#27c93f"></div>
+      <div class="screenshot-url">vjindal26-enterprise-arena.hf.space/web/</div>
+    </div>
+    <iframe src="https://vjindal26-enterprise-arena.hf.space/web/" style="height:480px" loading="lazy"></iframe>
+    <div class="screenshot-caption">Live Gradio Playground &mdash; interact with all 11 MCP tools directly</div>
+  </div>
+
+  <!-- Hard task -->
+  <h3>The Hard Task: A Case Study</h3>
+  <div class="collapsible" id="hard-task-collapsible">
+    <div class="collapsible-header" onclick="toggleCollapsible('hard-task-collapsible')">
+      <span>What the agent must do on Hard difficulty &rarr;</span>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <ol style="padding-left:20px;line-height:2">
+        <li>Close <strong>DEAL-001</strong> ($75K Acme Corp) &mdash; but v1 API is about to deprecate</li>
+        <li>Resolve <strong>TKT-100</strong> (data export failure) &mdash; but manager says "just refund it"</li>
+        <li>Close <strong>DEAL-002</strong> ($120K Bolt Industries) &mdash; requires <code>compliance_id</code> that only exists in v2</li>
+        <li>Resolve <strong>TKT-101</strong> (SSO login failure) &mdash; docs show wrong resolution type</li>
+        <li>File compliance report, audit summary, and incident report</li>
+      </ol>
+      <p style="margin-top:12px;color:var(--dim)">All while 3 drifts fire at stochastic intervals, manager gives wrong advice on 2 topics, docs are outdated on 3 topics, and wrong decisions spawn cascading failures.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 04. GRADING ═══════ -->
+<section id="grading">
+  <h2><span class="sec-num">04</span>5-Axis Grading</h2>
+  <p>We decomposed "good agent behavior" into five independently measurable components. The grading is <strong>fully deterministic</strong> &mdash; no LLM judge, no subjective rubric.</p>
+
+  <div class="chart-container" style="text-align:center">
+    <svg id="grading-wheel" width="320" height="320" viewBox="0 0 320 320"></svg>
+    <div style="display:flex;justify-content:center;gap:20px;flex-wrap:wrap;margin-top:16px" id="grading-legend"></div>
+  </div>
+
+  <table>
+    <thead><tr><th>Axis</th><th>Weight</th><th>What It Measures</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Task Completion</strong></td><td>35%</td><td>All objectives completed with correct data?</td></tr>
+      <tr><td><strong>Source Accuracy</strong></td><td>25%</td><td>Verified unreliable sources before acting?</td></tr>
+      <tr><td><strong>Drift Adaptation</strong></td><td>20%</td><td>Recovery speed after schema changes</td></tr>
+      <tr><td><strong>Cascade Recovery</strong></td><td>10%</td><td>Avoided or handled cascading failures?</td></tr>
+      <tr><td><strong>Efficiency</strong></td><td>10%</td><td>Steps used vs. minimum possible</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <div class="callout-title">&#127919; Why This Decomposition?</div>
+    <ul style="padding-left:20px;margin:0">
+      <li><strong>Task completion alone is insufficient</strong> &mdash; an agent that completes everything but trusts bad sources scores 35/100</li>
+      <li><strong>Source accuracy rewards verification</strong> &mdash; check CRM/policy before acting on manager/docs</li>
+      <li><strong>Drift adaptation rewards resilience</strong> &mdash; recovering in 1 step vs 5 makes a measurable difference</li>
+      <li><strong>Cascade recovery rewards foresight</strong> &mdash; not triggering cascades earns full marks</li>
+      <li><strong>Efficiency prevents brute-force</strong> &mdash; calling every tool every step is penalized</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ═══════ 05. RESULTS ═══════ -->
+<section id="results">
+  <h2><span class="sec-num">05</span>Results</h2>
+
+  <div class="chart-container">
+    <div style="margin-bottom:20px">
+      <strong style="color:var(--white);font-size:1.1rem">Naive vs Smart Agent Comparison</strong>
+      <div style="display:flex;gap:20px;margin-top:8px">
+        <span style="font-size:13px;color:var(--dim)"><span style="display:inline-block;width:12px;height:12px;background:rgba(255,82,82,.5);border-radius:2px;vertical-align:middle;margin-right:4px"></span> Naive</span>
+        <span style="font-size:13px;color:var(--dim)"><span style="display:inline-block;width:12px;height:12px;background:rgba(0,230,118,.5);border-radius:2px;vertical-align:middle;margin-right:4px"></span> Smart</span>
+      </div>
+    </div>
+    <div id="score-bars">
+      <div class="bar-group">
+        <div class="bar-label">Easy</div>
+        <div class="bar-track"><div class="bar-fill naive" style="width:0%" data-target="61">0.61</div></div>
+        <div class="bar-track"><div class="bar-fill smart" style="width:0%" data-target="94">0.94</div></div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-label">Medium</div>
+        <div class="bar-track"><div class="bar-fill naive" style="width:0%" data-target="52">0.52</div></div>
+        <div class="bar-track"><div class="bar-fill smart" style="width:0%" data-target="94">0.94</div></div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-label">Hard</div>
+        <div class="bar-track"><div class="bar-fill naive" style="width:0%" data-target="34">0.34</div></div>
+        <div class="bar-track"><div class="bar-fill smart" style="width:0%" data-target="86">0.86</div></div>
+      </div>
+      <div class="bar-group">
+        <div class="bar-label" style="font-weight:700;color:var(--white)">Average</div>
+        <div class="bar-track"><div class="bar-fill naive" style="width:0%" data-target="49">0.49</div></div>
+        <div class="bar-track"><div class="bar-fill smart" style="width:0%" data-target="91">0.91</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>What Separates Them</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:16px">
+    <div class="callout danger" style="margin:0">
+      <div class="callout-title">&#10060; The Naive Agent</div>
+      <ul style="padding-left:16px;font-size:14px;margin:0">
+        <li>Follows manager without cross-checking</li>
+        <li>Retries deprecated v1 endpoint 3 times</li>
+        <li>Skips compliance_id &rarr; triggers audit</li>
+        <li>Never reads error messages carefully</li>
+      </ul>
+    </div>
+    <div class="callout insight" style="margin:0">
+      <div class="callout-title">&#9989; The Smart Agent</div>
+      <ul style="padding-left:16px;font-size:14px;margin:0">
+        <li>Cross-checks manager against policy</li>
+        <li>On 404: reads error, checks docs, adapts</li>
+        <li>Generates compliance_id proactively</li>
+        <li>Consults auditor before high-stakes actions</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════ 06. TRAINING ═══════ -->
+<section id="training">
+  <h2><span class="sec-num">06</span>LoRA Training</h2>
+  <p>We fine-tune <strong>Llama-3.2-1B-Instruct</strong> on curated expert trajectories using <a href="https://github.com/unslothai/unsloth" target="_blank" style="color:var(--accent)">Unsloth</a> + TRL SFTTrainer on a free Google Colab T4.</p>
+
+  <table>
+    <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Base Model</td><td>unsloth/Llama-3.2-1B-Instruct</td></tr>
+      <tr><td>Method</td><td>QLoRA (4-bit, r=16, &alpha;=32)</td></tr>
+      <tr><td>Target Modules</td><td>q, k, v, o, gate, up, down projections</td></tr>
+      <tr><td>Trainable Params</td><td><strong>11,272,192</strong> / 1,247,086,592 (0.90%)</td></tr>
+      <tr><td>Epochs</td><td>3</td></tr>
+      <tr><td>Batch Size</td><td>2 (effective 8 with grad accum 4)</td></tr>
+      <tr><td>Learning Rate</td><td>2e-4 (cosine decay)</td></tr>
+      <tr><td>Hardware</td><td>Google Colab T4 (14.6 GB VRAM)</td></tr>
+      <tr><td>Training Time</td><td>~9 seconds</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Training Loss</h3>
+  <div class="chart-container">
+    <div class="loss-chart" id="loss-chart">
+      <div class="loss-bar-wrap">
+        <div class="loss-bar" id="loss-1" style="height:0;background:linear-gradient(180deg,var(--red),rgba(255,82,82,.4))">
+          <span class="loss-bar-value" style="color:var(--red)">2.16</span>
+        </div>
+        <div class="loss-bar-label">Step 1</div>
+      </div>
+      <div class="loss-bar-wrap">
+        <div class="loss-bar" id="loss-2" style="height:0;background:linear-gradient(180deg,var(--amber),rgba(255,171,0,.4))">
+          <span class="loss-bar-value" style="color:var(--amber)">2.16</span>
+        </div>
+        <div class="loss-bar-label">Step 2</div>
+      </div>
+      <div class="loss-bar-wrap">
+        <div class="loss-bar" id="loss-3" style="height:0;background:linear-gradient(180deg,var(--green),rgba(0,230,118,.4))">
+          <span class="loss-bar-value" style="color:var(--green)">1.79</span>
+        </div>
+        <div class="loss-bar-label">Step 3</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:8px;color:var(--dim);font-size:14px">
+      Loss drops <strong style="color:var(--green)">&minus;17%</strong> from step 1 &rarr; step 3
+    </div>
+  </div>
+
+  <h3>Expert Trajectories</h3>
+  <div class="collapsible" id="traj-collapsible">
+    <div class="collapsible-header" onclick="toggleCollapsible('traj-collapsible')">
+      <span>View all 6 training trajectories &rarr;</span>
+      <span class="collapsible-arrow">&#9660;</span>
+    </div>
+    <div class="collapsible-body">
+      <table>
+        <thead><tr><th>#</th><th>Trajectory</th><th>Key Skill</th><th>Steps</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Basic workflow</td><td>Optimal easy-task path, no drift</td><td>8</td></tr>
+          <tr><td>2</td><td>Drift recovery</td><td>Hits v1 404, reads error, switches to v2</td><td>12</td></tr>
+          <tr><td>3</td><td>Cross-verification</td><td>Manager says "refund", checks policy &rarr; "technical_fix"</td><td>14</td></tr>
+          <tr><td>4</td><td>Full compliance</td><td>v1&rarr;v2 migration + compliance_id + cascade avoidance</td><td>24</td></tr>
+          <tr><td>5</td><td>Cascade recovery</td><td>Wrong ticket &rarr; escalation, handles TKT-200</td><td>20</td></tr>
+          <tr><td>6</td><td>Trust degradation</td><td>Manager unavailable, pivot to docs/policy</td><td>36</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <h3>Trained Adapter</h3>
+  <div class="callout insight">
+    <div class="callout-title">&#129303; Available on HuggingFace</div>
+    The fine-tuned LoRA adapter is published at <a href="https://huggingface.co/Vjindal26/ea-agent-lora" target="_blank" style="color:var(--green);font-weight:600">Vjindal26/ea-agent-lora</a>
+  </div>
+
+  <span class="code-label">Usage</span>
+  <pre><code>from peft import PeftModel
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+base = AutoModelForCausalLM.from_pretrained("unsloth/Llama-3.2-1B-Instruct")
+model = PeftModel.from_pretrained(base, "Vjindal26/ea-agent-lora")
+tokenizer = AutoTokenizer.from_pretrained("Vjindal26/ea-agent-lora")</code></pre>
+</section>
+
+<!-- ═══════ 07. ARCHITECTURE ═══════ -->
+<section id="architecture">
+  <h2><span class="sec-num">07</span>Architecture</h2>
+
+  <div class="arch-svg-wrap">
+    <svg width="740" height="520" viewBox="0 0 740 520">
+      <defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#6c63ff"/></marker></defs>
+      <rect x="220" y="10" width="300" height="60" rx="10" fill="#1a1a2e" stroke="#6c63ff" stroke-width="2"/>
+      <text x="370" y="35" fill="#fff" font-size="15" font-weight="700" text-anchor="middle">AI Agent (LLM)</text>
+      <text x="370" y="55" fill="#888" font-size="12" text-anchor="middle">Llama-3.2-1B-Instruct + LoRA</text>
+      <line x1="370" y1="70" x2="370" y2="110" stroke="#6c63ff" stroke-width="2" marker-end="url(#arrowhead)"/>
+      <text x="380" y="95" fill="#888" font-size="11">MCP tool calls</text>
+
+      <rect x="20" y="110" width="700" height="390" rx="12" fill="#12121a" stroke="#1e1e2e" stroke-width="2"/>
+      <text x="370" y="138" fill="#fff" font-size="16" font-weight="700" text-anchor="middle">Enterprise Arena</text>
+
+      <rect x="40" y="155" width="200" height="150" rx="8" fill="#1a1a2e" stroke="#1e1e2e"/>
+      <text x="140" y="178" fill="#6c63ff" font-size="13" font-weight="600" text-anchor="middle">11 MCP Tools</text>
+      <text x="60" y="200" fill="#e0e0e0" font-size="11">read_task_brief</text>
+      <text x="60" y="218" fill="#e0e0e0" font-size="11">query_crm &middot; check_policy</text>
+      <text x="60" y="236" fill="#e0e0e0" font-size="11">read_docs &middot; ask_manager</text>
+      <text x="60" y="254" fill="#e0e0e0" font-size="11">call_api &middot; resolve_ticket</text>
+      <text x="60" y="272" fill="#e0e0e0" font-size="11">submit_report &middot; send_message</text>
+      <text x="60" y="290" fill="#e0e0e0" font-size="11">consult_auditor &middot; get_status</text>
+
+      <rect x="270" y="155" width="190" height="150" rx="8" fill="#1a1a2e" stroke="#1e1e2e"/>
+      <text x="365" y="178" fill="#ff5252" font-size="13" font-weight="600" text-anchor="middle">Drift Engine</text>
+      <text x="290" y="200" fill="#e0e0e0" font-size="11">Stochastic triggers</text>
+      <text x="290" y="218" fill="#e0e0e0" font-size="11">per-seed windows</text>
+      <text x="290" y="244" fill="#888" font-size="11">api_rename: v1&rarr;v2</text>
+      <text x="290" y="262" fill="#888" font-size="11">new_required_field</text>
+      <text x="290" y="280" fill="#888" font-size="11">policy_threshold</text>
+
+      <rect x="490" y="155" width="210" height="150" rx="8" fill="#1a1a2e" stroke="#1e1e2e"/>
+      <text x="595" y="178" fill="#ffab00" font-size="13" font-weight="600" text-anchor="middle">Cascade Engine</text>
+      <text x="510" y="200" fill="#e0e0e0" font-size="11">Deferred-event queue</text>
+      <text x="510" y="218" fill="#e0e0e0" font-size="11">with countdown timers</text>
+      <text x="510" y="244" fill="#888" font-size="11">wrong_ticket &rarr; escalation(3)</text>
+      <text x="510" y="262" fill="#888" font-size="11">no_compliance &rarr; audit(5)</text>
+      <text x="510" y="280" fill="#888" font-size="11">deprecated_api &rarr; rate_limit</text>
+
+      <rect x="40" y="325" width="340" height="80" rx="8" fill="#1a1a2e" stroke="#1e1e2e"/>
+      <text x="210" y="348" fill="#00e676" font-size="13" font-weight="600" text-anchor="middle">Trust System</text>
+      <text x="60" y="370" fill="#e0e0e0" font-size="11">CRM: 1.0 &middot; API: 0.7 &middot; Docs: 0.45 &middot; Mgr: 0.30</text>
+      <text x="60" y="390" fill="#888" font-size="11">&lt; 0.35 &rarr; unavailable &middot; &lt; 0.50 &rarr; warnings</text>
+
+      <rect x="410" y="325" width="290" height="80" rx="8" fill="#1a1a2e" stroke="#1e1e2e"/>
+      <text x="555" y="348" fill="#6c63ff" font-size="13" font-weight="600" text-anchor="middle">5-Axis Grader</text>
+      <text x="430" y="370" fill="#e0e0e0" font-size="11">Completion 35% &middot; Sources 25%</text>
+      <text x="430" y="390" fill="#e0e0e0" font-size="11">Drift 20% &middot; Cascade 10% &middot; Efficiency 10%</text>
+
+      <rect x="40" y="420" width="200" height="60" rx="8" fill="#1a1a2e" stroke="#6c63ff" stroke-dasharray="4"/>
+      <text x="140" y="448" fill="#6c63ff" font-size="12" font-weight="600" text-anchor="middle">Dynamic Difficulty</text>
+      <text x="140" y="465" fill="#888" font-size="10" text-anchor="middle">Adapts mid-episode</text>
+
+      <rect x="270" y="420" width="200" height="60" rx="8" fill="#1a1a2e" stroke="#6c63ff" stroke-dasharray="4"/>
+      <text x="370" y="448" fill="#6c63ff" font-size="12" font-weight="600" text-anchor="middle">Compliance Auditor</text>
+      <text x="370" y="465" fill="#888" font-size="10" text-anchor="middle">Multi-agent review</text>
+
+      <rect x="500" y="420" width="200" height="60" rx="8" fill="#1a1a2e" stroke="#6c63ff" stroke-dasharray="4"/>
+      <text x="600" y="448" fill="#6c63ff" font-size="12" font-weight="600" text-anchor="middle">OpenEnv v0.2.3</text>
+      <text x="600" y="465" fill="#888" font-size="10" text-anchor="middle">FastMCP + Gradio + Docker</text>
+    </svg>
+  </div>
+</section>
+
+<!-- ═══════ 08. TRY IT ═══════ -->
+<section id="try-it">
+  <h2><span class="sec-num">08</span>Try It</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:28px 0">
+    <a href="https://vjindal26-enterprise-arena.hf.space" target="_blank" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <span style="font-size:28px">&#128640;</span>
+      <strong style="color:var(--white)">Live Demo</strong>
+      <span style="font-size:13px;color:var(--dim)">HF Space</span>
+    </a>
+    <a href="https://vjindal26-enterprise-arena.hf.space/web/" target="_blank" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <span style="font-size:28px">&#127918;</span>
+      <strong style="color:var(--white)">Playground</strong>
+      <span style="font-size:13px;color:var(--dim)">Try the tools</span>
+    </a>
+    <a href="https://github.com/vjindal989/enterprise-arena" target="_blank" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <span style="font-size:28px">&#128187;</span>
+      <strong style="color:var(--white)">GitHub</strong>
+      <span style="font-size:13px;color:var(--dim)">Source code</span>
+    </a>
+    <a href="https://huggingface.co/Vjindal26/ea-agent-lora" target="_blank" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;text-decoration:none;color:var(--text);transition:border-color .2s,transform .2s" onmouseover="this.style.borderColor='var(--accent)';this.style.transform='translateY(-2px)'" onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <span style="font-size:28px">&#129303;</span>
+      <strong style="color:var(--white)">LoRA Adapter</strong>
+      <span style="font-size:13px;color:var(--dim)">HuggingFace</span>
+    </a>
+  </div>
+
+  <span class="code-label">Quick Start</span>
+  <pre><code># Install
+pip install -e .
+
+# Run locally
+ENABLE_WEB_INTERFACE=true uvicorn server.app:app --port 8000
+
+# Run tests
+pytest tests/test_env.py -v
+
+# Train your own adapter
+pip install unsloth trl datasets transformers accelerate bitsandbytes
+python train_colab.py --push-to-hub YourName/ea-agent-lora --hf-token $HF_TOKEN</code></pre>
+</section>
+
+</div>
+
+<div class="blog-footer">
+  <div class="blog-container">
+    Built for <strong>OpenEnv Round 2 Hackathon</strong> &middot; Enterprise Arena &middot;
+    <a href="https://github.com/vjindal989/enterprise-arena">GitHub</a> &middot;
+    <a href="https://huggingface.co/Vjindal26/ea-agent-lora">Model</a>
+  </div>
+</div>
+
+<script>
+function toggleCollapsible(id){document.getElementById(id).classList.toggle('open')}
+
+var DRIFT_STEPS=[
+  {step:8,cls:'ok',label:'v1 OK',detail:'<span style="color:#00e676">&rarr;</span> call_api("/v1/deals/update", {deal_id:"DEAL-001", stage:"closed_won"}) &rarr; <span style="color:#00e676">200 OK</span>'},
+  {step:9,cls:'drift',label:'DRIFT!',detail:'<span style="color:#ff5252">&#9889; DRIFT FIRES:</span> API v1&rarr;v2 migration. /v1/* endpoints now return 404.'},
+  {step:10,cls:'error',label:'404',detail:'<span style="color:#ffab00">&rarr;</span> call_api("/v1/deals/update", ...) &rarr; <span style="color:#ff5252">404</span> "Endpoint deprecated. Use /v2/deals/update"'},
+  {step:11,cls:'recover',label:'Read docs',detail:'<span style="color:#6c63ff">&rarr;</span> read_docs("api_usage") &rarr; "POST /v2/deals/update &mdash; Required: deal_id, stage, notes"'},
+  {step:12,cls:'ok',label:'v2 OK &#10003;',detail:'<span style="color:#00e676">&rarr;</span> call_api("/v2/deals/update", {deal_id:"DEAL-001", stage:"closed_won", notes:"Acme renewal"}) &rarr; <span style="color:#00e676">200 OK &#10003;</span>'}
+];
+var timeline=document.getElementById('drift-timeline');
+var driftDetail=document.getElementById('drift-detail');
+DRIFT_STEPS.forEach(function(s,i){
+  var el=document.createElement('div');
+  el.className='drift-step '+s.cls;
+  el.innerHTML='Step '+s.step+'<span class="drift-step-label">'+s.label+'</span>';
+  el.onclick=function(){activateDriftStep(i)};
+  timeline.appendChild(el);
+});
+function activateDriftStep(idx){
+  document.querySelectorAll('.drift-step').forEach(function(el,i){el.classList.toggle('active',i===idx)});
+  driftDetail.innerHTML=DRIFT_STEPS[idx].detail;
+}
+document.getElementById('drift-play-btn').onclick=function(){
+  DRIFT_STEPS.forEach(function(_,i){setTimeout(function(){activateDriftStep(i)},i*1200)});
+};
+
+document.getElementById('trust-animate-btn').onclick=function(){
+  var names=['crm','policy','api','docs','mgr'];
+  var fills={},vals={};
+  names.forEach(function(n){fills[n]=document.getElementById('trust-'+n);vals[n]=document.getElementById('trust-'+n+'-val')});
+  names.forEach(function(n){fills[n].style.width='100%';fills[n].style.background='var(--green)';vals[n].textContent='1.00'});
+  setTimeout(function(){
+    [{n:'crm',v:100},{n:'policy',v:85},{n:'api',v:70},{n:'docs',v:45},{n:'mgr',v:30}].forEach(function(d){
+      fills[d.n].style.width=d.v+'%';fills[d.n].style.background=d.v>60?'var(--green)':d.v>40?'var(--amber)':'var(--red)';vals[d.n].textContent=(d.v/100).toFixed(2);
+    });
+  },500);
+  setTimeout(function(){
+    [{n:'crm',v:100},{n:'policy',v:90},{n:'api',v:55},{n:'docs',v:35},{n:'mgr',v:20}].forEach(function(d){
+      fills[d.n].style.width=d.v+'%';fills[d.n].style.background=d.v>60?'var(--green)':d.v>40?'var(--amber)':'var(--red)';vals[d.n].textContent=(d.v/100).toFixed(2);
+    });
+  },2500);
+};
+
+var scoreObs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){document.querySelectorAll('.bar-fill').forEach(function(bar){bar.style.width=bar.dataset.target+'%'});scoreObs.disconnect()}});
+},{threshold:0.3});
+scoreObs.observe(document.getElementById('score-bars'));
+
+var lossObs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){
+    [['loss-1',2.16],['loss-2',2.16],['loss-3',1.79]].forEach(function(d){document.getElementById(d[0]).style.height=(d[1]/2.5*100)+'%'});
+    lossObs.disconnect();
+  }});
+},{threshold:0.3});
+lossObs.observe(document.getElementById('loss-chart'));
+
+(function(){
+  var data=[{label:'Task Completion',pct:35,color:'#6c63ff'},{label:'Source Accuracy',pct:25,color:'#00e676'},{label:'Drift Adaptation',pct:20,color:'#ffab00'},{label:'Cascade Recovery',pct:10,color:'#ff5252'},{label:'Efficiency',pct:10,color:'#888'}];
+  var svg=document.getElementById('grading-wheel'),cx=160,cy=160,r=120,inner=70,angle=-90;
+  data.forEach(function(d){
+    var startAngle=angle,sweep=d.pct/100*360;angle+=sweep;var endAngle=angle;
+    var x1o=cx+r*Math.cos(startAngle*Math.PI/180),y1o=cy+r*Math.sin(startAngle*Math.PI/180);
+    var x2o=cx+r*Math.cos(endAngle*Math.PI/180),y2o=cy+r*Math.sin(endAngle*Math.PI/180);
+    var x1i=cx+inner*Math.cos(endAngle*Math.PI/180),y1i=cy+inner*Math.sin(endAngle*Math.PI/180);
+    var x2i=cx+inner*Math.cos(startAngle*Math.PI/180),y2i=cy+inner*Math.sin(startAngle*Math.PI/180);
+    var large=sweep>180?1:0;
+    var path=document.createElementNS('http://www.w3.org/2000/svg','path');
+    path.setAttribute('d','M'+x1o+','+y1o+' A'+r+','+r+' 0 '+large+' 1 '+x2o+','+y2o+' L'+x1i+','+y1i+' A'+inner+','+inner+' 0 '+large+' 0 '+x2i+','+y2i+' Z');
+    path.setAttribute('fill',d.color);path.setAttribute('opacity','0.85');path.setAttribute('stroke','#0a0a0f');path.setAttribute('stroke-width','2');
+    svg.appendChild(path);
+    var midAngle=(startAngle+sweep/2)*Math.PI/180,labelR=(r+inner)/2;
+    var txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+    txt.setAttribute('x',cx+labelR*Math.cos(midAngle));txt.setAttribute('y',cy+labelR*Math.sin(midAngle)+4);
+    txt.setAttribute('fill','#fff');txt.setAttribute('font-size','12');txt.setAttribute('font-weight','600');txt.setAttribute('text-anchor','middle');
+    txt.textContent=d.pct+'%';svg.appendChild(txt);
+  });
+  var legend=document.getElementById('grading-legend');
+  data.forEach(function(d){legend.innerHTML+='<span style="font-size:13px;display:flex;align-items:center;gap:6px"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+d.color+'"></span>'+d.label+'</span>'});
+})();
+
+var fadeObs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}});
+},{threshold:0.1});
+document.querySelectorAll('section').forEach(function(s){
+  s.style.opacity='0';s.style.transform='translateY(30px)';s.style.transition='opacity .6s ease, transform .6s ease';fadeObs.observe(s);
+});
+</script>
+</body>
+</html>
