@@ -169,6 +169,14 @@ if _STATIC_DIR.is_dir():
     _ASSETS_DIR = _STATIC_DIR / "assets"
     if _ASSETS_DIR.is_dir():
         app.mount("/assets", StaticFiles(directory=str(_ASSETS_DIR)), name="static-assets")
+
+    # Serve interactive blog
+    @app.get("/blog", response_class=HTMLResponse)
+    async def blog_page():
+        blog = _STATIC_DIR / "blog.html"
+        if blog.exists():
+            return FileResponse(blog, media_type="text/html")
+        return HTMLResponse("<h1>Blog</h1><p>Coming soon</p>")
 else:
     # Fallback: no build output, redirect / to playground
     @app.get("/")

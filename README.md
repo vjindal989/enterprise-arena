@@ -17,7 +17,7 @@ tags:
 
 An OpenEnv environment where AI agents navigate realistic enterprise workflows under **stochastic schema drift**, **adversarial information sources**, **functional trust degradation**, **cascading consequences**, **multi-agent compliance auditing**, and **dynamic difficulty scaling**.
 
-**[Live Demo](https://vjindal26-enterprise-arena.hf.space)** · **[Playground](https://vjindal26-enterprise-arena.hf.space/web/)** · **[Blog](BLOG.md)** · **[LoRA Adapter](https://huggingface.co/Vjindal26/ea-agent-lora)**
+**[Live Demo](https://vjindal26-enterprise-arena.hf.space)** · **[Playground](https://vjindal26-enterprise-arena.hf.space/web/)** · **[Blog](https://vjindal26-enterprise-arena.hf.space/blog)** · **[LoRA Adapter](https://huggingface.co/Vjindal26/ea-agent-lora)**
 
 ## What Makes It Hard
 
