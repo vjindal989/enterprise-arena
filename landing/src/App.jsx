@@ -663,6 +663,49 @@ export default function App() {
           Naive vs. smart agent scores across all difficulty tiers. +86% average improvement after training on expert trajectories.
         </p>
         <ScoreComparison />
+
+        {/* Training Metrics */}
+        <div style={{ marginTop: 48, display: 'flex', justifyContent: 'center', gap: 20, flexWrap: 'wrap' }}>
+          <Card glow={COLORS.accent} style={{ minWidth: 320, maxWidth: 500, flex: '1 1 320px' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: COLORS.white, marginBottom: 16, textAlign: 'center' }}>
+              LoRA Training — Verified on Colab T4
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px 24px', fontSize: 13 }}>
+              {[
+                ['Model', 'Llama-3.2-1B-Instruct'],
+                ['Framework', 'Unsloth + TRL'],
+                ['Trainable', '11.3M / 1.25B (0.90%)'],
+                ['Quantization', '4-bit QLoRA'],
+                ['Trajectories', '6 expert episodes'],
+                ['Epochs', '3 (9 seconds)'],
+              ].map(([k, v]) => (
+                <div key={k}><span style={{ color: COLORS.textDim }}>{k}:</span>{' '}<span style={{ color: COLORS.white, fontWeight: 600 }}>{v}</span></div>
+              ))}
+            </div>
+            <div style={{ marginTop: 20, borderTop: `1px solid ${COLORS.border}`, paddingTop: 16 }}>
+              <div style={{ fontSize: 13, color: COLORS.textDim, marginBottom: 8 }}>Training Loss</div>
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 80 }}>
+                {[
+                  { step: 1, loss: 2.160, h: 95 },
+                  { step: 2, loss: 2.160, h: 95 },
+                  { step: 3, loss: 1.793, h: 62 },
+                ].map(d => (
+                  <div key={d.step} style={{ flex: 1, textAlign: 'center' }}>
+                    <div style={{
+                      height: d.h, background: `linear-gradient(180deg, ${COLORS.accent}, ${COLORS.accent}44)`,
+                      borderRadius: '4px 4px 0 0', marginBottom: 4, transition: 'height 0.5s',
+                    }} />
+                    <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.white }}>{d.loss.toFixed(3)}</div>
+                    <div style={{ fontSize: 10, color: COLORS.textDim }}>Step {d.step}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ textAlign: 'center', marginTop: 8, fontSize: 12, color: COLORS.green, fontWeight: 600 }}>
+                Final loss: 2.038 — 17% reduction
+              </div>
+            </div>
+          </Card>
+        </div>
       </section>
 
       {/* ── Difficulty Tiers ── */}

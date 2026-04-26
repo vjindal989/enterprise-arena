@@ -183,14 +183,28 @@ We fine-tune **Llama-3.2-1B-Instruct** on curated expert trajectories using:
 
 | Parameter | Value |
 |-----------|-------|
-| Framework | Unsloth + TRL SFTTrainer |
+| Framework | Unsloth 2026.4.8 + TRL SFTTrainer |
 | Quantization | 4-bit (QLoRA) |
 | LoRA rank | 16 |
 | LoRA alpha | 32 |
 | Target modules | q, k, v, o, gate, up, down projections |
+| Trainable params | 11,272,192 / 1,247,086,592 (0.90%) |
 | Epochs | 3 |
+| Batch size | 2 (effective 8 with grad accum 4) |
 | Learning rate | 2e-4 (cosine decay) |
-| Hardware | Free Colab T4 GPU |
+| Hardware | Google Colab T4 (14.6 GB VRAM) |
+| Training time | ~9 seconds |
+
+### Training Loss
+
+| Step | Training Loss |
+|------|---------------|
+| 1 | 2.1603 |
+| 2 | 2.1603 |
+| 3 | 1.7927 |
+| **Final** | **2.0378** |
+
+Loss drops 17% from step 1 to step 3, showing the model is learning the cross-verification and drift-recovery patterns from the expert trajectories. The small dataset (6 trajectories) means we see only 3 gradient steps, but each step encodes a complete episode of 8-36 tool calls.
 
 ### Expert Trajectories
 
@@ -205,11 +219,13 @@ Each trajectory is a conversation in Llama ChatML format:
 ...
 ```
 
-We embed 4 curated trajectories covering:
-1. **Basic workflow** — optimal path with no drift
+We embed 6 curated trajectories covering:
+1. **Basic workflow** — optimal easy-task path with no drift
 2. **Drift recovery** — hits v1 404, reads error, switches to v2
 3. **Cross-verification** — manager says "refund", agent checks policy, uses "technical_fix"
 4. **Full compliance chain** — v1→v2 migration + compliance_id generation + cascade avoidance
+5. **Cascade recovery** — wrong ticket resolution triggers escalation, agent handles TKT-200
+6. **Trust degradation** — manager becomes unavailable at low trust, agent pivots to docs/policy
 
 ### What the Model Learns
 

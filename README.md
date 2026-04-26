@@ -85,6 +85,8 @@ python train_colab.py
 python train_colab.py --data trajectories.jsonl --epochs 3
 ```
 
+**Verified on Google Colab T4** — Llama-3.2-1B-Instruct, 11.3M trainable params (0.90%), 6 expert trajectories, 3 epochs in ~9 seconds. Training loss: 2.16 → 1.79 (−17%).
+
 ## API
 
 ```bash
